@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { getDashboard } from "@/lib/admin/dashboard";
 import { formatDOP } from "@/lib/domain/money";
@@ -57,13 +58,15 @@ async function Dashboard() {
         ) : (
           <ul className="divide-y divide-border">
             {d.recent.map((o) => (
-              <li key={o.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
-                <span className="font-mono text-sm font-semibold">{o.code}</span>
-                <span className="min-w-0 flex-1 truncate text-sm">{o.customerName}</span>
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${toneClass[ORDER_STATUS_TONE[o.status]]}`}>
-                  {ORDER_STATUS_LABEL[o.status]}
-                </span>
-                <span className="text-sm font-semibold tabular-nums">{formatDOP(o.totalCents)}</span>
+              <li key={o.id}>
+                <Link href={`/admin/pedidos/${o.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-surface">
+                  <span className="font-mono text-sm font-semibold">{o.code}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm">{o.customerName}</span>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${toneClass[ORDER_STATUS_TONE[o.status]]}`}>
+                    {ORDER_STATUS_LABEL[o.status]}
+                  </span>
+                  <span className="text-sm font-semibold tabular-nums">{formatDOP(o.totalCents)}</span>
+                </Link>
               </li>
             ))}
           </ul>
