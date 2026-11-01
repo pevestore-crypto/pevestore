@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+/*
+ * Sistema de diseño PEVESTORE.
+ * Los componentes usan solo tokens semánticos (bg-surface, text-muted, bg-brand…),
+ * nunca colores directos, para que el modo claro/oscuro y un futuro ajuste de
+ * marca se cambien únicamente aquí.
+ *
+ * Tema: data-theme="light" | "dark" en <html>. Sin atributo = preferencia del sistema.
+ */
+
+:root {
+  /* Marca (referencias iniciales, ajustables al logotipo oficial) */
+  --brand: #e30613;
+  --brand-hover: #c00510;
+  --brand-contrast: #ffffff;
+  --accent: #ffc400;
+  --accent-contrast: #111111;
+
+  /* Modo claro */
+  --background: #ffffff;
+  --foreground: #111111;
+  --surface: #f3f4f6;
+  --surface-raised: #ffffff;
+  --muted: #52525b;
+  --border: #e4e4e7;
+  --brand-soft: #fdecee;
+
+  --success: #15803d;
+  --success-soft: #e8f6ec;
+  --warning: #a16207;
+  --warning-soft: #fdf6db;
+  --info: #1d4ed8;
+  --info-soft: #e8efff;
+  --danger: #b91c1c;
+
+  --radius: 0.875rem;
+  color-scheme: light;
+}
+
+/* Modo oscuro: mismo bloque en ambos selectores (sistema y elección manual). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #0b0b0c;
+    --foreground: #f4f4f5;
+    --surface: #27272a;
+    --surface-raised: #1c1c1f;
+    --muted: #a1a1aa;
+    --border: #3f3f46;
+    --brand-soft: #3a0d10;
+    --brand-hover: #ff1a27;
+    --success: #4ade80;
+    --success-soft: #12301d;
+    --warning: #facc15;
+    --warning-soft: #33290a;
+    --info: #93b4ff;
+    --info-soft: #172447;
+    --danger: #f87171;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --background: #0b0b0c;
+  --foreground: #f4f4f5;
+  --surface: #27272a;
+  --surface-raised: #1c1c1f;
+  --muted: #a1a1aa;
+  --border: #3f3f46;
+  --brand-soft: #3a0d10;
+  --brand-hover: #ff1a27;
+  --success: #4ade80;
+  --success-soft: #12301d;
+  --warning: #facc15;
+  --warning-soft: #33290a;
+  --info: #93b4ff;
+  --info-soft: #172447;
+  --danger: #f87171;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-contrast: var(--brand-contrast);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-danger: var(--danger);
+  --radius-card: var(--radius);
+  --font-sans: var(--font-sans-family);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans-family), system-ui, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
