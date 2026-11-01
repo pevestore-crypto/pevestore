@@ -118,6 +118,18 @@ describe("submit_receipt", () => {
   });
 });
 
+describe("lookup_order", () => {
+  it("exige número de pedido Y WhatsApp, y no expone datos personales", async () => {
+    const o = await createOrder(payload({ customerWhatsapp: "18295557777" }));
+    const number = Number(o.code.slice(4));
+    const hit = await db.query<Record<string, unknown>>("select * from lookup_order($1, $2)", [number, "18295557777"]);
+    expect(hit.rows).toHaveLength(1);
+    expect(Object.keys(hit.rows[0]).sort()).toEqual(["code", "created_at", "estimated_date", "paid_verified_cents", "required_date", "status", "total_cents"]);
+    expect((await db.query("select * from lookup_order($1, $2)", [number, "18095550000"])).rows).toHaveLength(0);
+    expect((await db.query("select * from lookup_order($1, $2)", [number + 999, "18295557777"])).rows).toHaveLength(0);
+  });
+});
+
 describe("rate_limit_hit", () => {
   it("permite hasta el límite dentro de la ventana", async () => {
     const results: boolean[] = [];

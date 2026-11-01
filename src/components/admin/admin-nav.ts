@@ -2,6 +2,7 @@
 export const adminNav = [
   { href: "/admin", label: "Inicio", ready: true },
   { href: "/admin/pedidos", label: "Pedidos", ready: true },
+  { href: "/admin/cotizaciones", label: "Cotizaciones", ready: true },
   { href: "/admin/productos", label: "Productos", ready: true },
   { href: "/admin/categorias", label: "Categorías", ready: true },
   { href: "/admin/promociones", label: "Promociones", ready: false },

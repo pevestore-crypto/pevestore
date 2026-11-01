@@ -162,6 +162,34 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
   };
 }
 
+export interface PublicService {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  asksMeasurements: boolean;
+  asksMaterial: boolean;
+}
+
+export async function getServices(): Promise<PublicService[]> {
+  "use cache";
+  cacheTag("catalog");
+  cacheLife("hours");
+  const { data, error } = await createSupabasePublicClient()
+    .from("services")
+    .select("id, slug, name, description, asks_measurements, asks_material")
+    .order("sort_order");
+  if (error) throw new Error(`Servicios no disponibles: ${error.message}`);
+  return data.map((s) => ({
+    id: s.id,
+    slug: s.slug,
+    name: s.name,
+    description: s.description,
+    asksMeasurements: s.asks_measurements,
+    asksMaterial: s.asks_material,
+  }));
+}
+
 export interface PublicSettings {
   whatsappNumber: string | null;
   policy: PricingPolicy;
