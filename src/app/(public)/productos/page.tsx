@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { CategoryChips } from "@/components/catalog/category-chips";
 import { GridSkeleton } from "@/components/catalog/grid-skeleton";
 import { ProductGrid } from "@/components/catalog/product-card";
-import { getCategories, getProducts, normalizeSearch } from "@/lib/catalog/public";
+import { getActivePromotions, getCategories, getProducts, normalizeSearch } from "@/lib/catalog/public";
 
 export const metadata: Metadata = {
   title: "Productos personalizados",
@@ -25,7 +25,7 @@ export default function ProductsPage({ searchParams }: PageProps<"/productos">) 
 async function Results({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.slice(0, 80) : "";
-  const [categories, products] = await Promise.all([getCategories(), getProducts()]);
+  const [categories, products, promotions] = await Promise.all([getCategories(), getProducts(), getActivePromotions()]);
   const term = normalizeSearch(q);
   const results = term
     ? products.filter((p) => normalizeSearch(`${p.name} ${p.shortDescription ?? ""} ${p.categoryName ?? ""}`).includes(term))
@@ -43,7 +43,7 @@ async function Results({ searchParams }: { searchParams: Promise<Record<string, 
       )}
       <div className="mt-5">
         {results.length ? (
-          <ProductGrid products={results} priorityCount={4} />
+          <ProductGrid products={results} promotions={promotions} priorityCount={4} />
         ) : (
           <EmptyResults query={q} />
         )}

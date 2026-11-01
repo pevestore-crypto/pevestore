@@ -61,6 +61,29 @@ export function businessDateTimeToUtc(date: IsoDate, time = "00:00"): Date {
   return new Date(guess.getTime() - (asIfUtc - guess.getTime()));
 }
 
+/** Instante UTC → "YYYY-MM-DDTHH:mm" en hora del negocio (para <input type="datetime-local">). */
+export function utcToBusinessLocal(instant: string | Date): string {
+  const p = zonedParts(new Date(instant), BUSINESS_TZ);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${p.year}-${pad(p.month)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}`;
+}
+
+/** "YYYY-MM-DDTHH:mm" en hora del negocio → instante UTC. */
+export function businessLocalToUtc(local: string): Date {
+  const [date, time] = local.split("T");
+  return businessDateTimeToUtc(date, (time ?? "00:00").slice(0, 5));
+}
+
+const longDateTime = new Intl.DateTimeFormat("es-DO", { day: "numeric", month: "long", hour: "numeric", minute: "2-digit", timeZone: BUSINESS_TZ });
+const longDay = new Intl.DateTimeFormat("es-DO", { day: "numeric", month: "long", timeZone: BUSINESS_TZ });
+
+/** "20 de diciembre" (o con hora si no termina a medianoche/23:59). */
+export function formatPromoEnd(instant: string | Date): string {
+  const local = utcToBusinessLocal(instant);
+  const time = local.slice(11);
+  return time === "23:59" || time === "00:00" ? longDay.format(new Date(instant)) : longDateTime.format(new Date(instant));
+}
+
 export function addDays(date: IsoDate, days: number): IsoDate {
   const d = new Date(`${date}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);

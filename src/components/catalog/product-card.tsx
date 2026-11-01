@@ -1,14 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
-import { type ProductSummary, publicImageUrl } from "@/lib/catalog/public";
-import { formatDOP } from "@/lib/domain/money";
+import { type ProductSummary, type PublicPromotion, promoUnitPrice, promotionsFor, publicImageUrl } from "@/lib/catalog/public";
+import { PriceTag } from "./price-tag";
 
-export function ProductCard({ product, priority = false }: { product: ProductSummary; priority?: boolean }) {
-  const hasVolumePrice = product.fromPriceCents < product.basePriceCents;
+export function ProductCard({ product, promotions = [], priority = false }: { product: ProductSummary; promotions?: PublicPromotion[]; priority?: boolean }) {
+  const best = promoUnitPrice(product.basePriceCents, promotionsFor(product, promotions));
   return (
     <Link
       href={`/producto/${product.slug}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface-raised transition-shadow hover:shadow-lg focus-visible:shadow-lg"
+      className="group flex w-full flex-col overflow-hidden rounded-2xl border border-border bg-surface-raised transition-shadow hover:shadow-lg focus-visible:shadow-lg"
     >
       <div className="relative aspect-square bg-surface">
         {product.imagePath ? (
@@ -32,21 +32,25 @@ export function ProductCard({ product, priority = false }: { product: ProductSum
       <div className="flex flex-1 flex-col gap-1 p-3 sm:p-4">
         <h3 className="line-clamp-2 text-sm font-semibold sm:text-base">{product.name}</h3>
         {product.shortDescription && <p className="line-clamp-2 text-xs text-muted sm:text-sm">{product.shortDescription}</p>}
-        <p className="mt-auto pt-1 text-base font-bold text-brand sm:text-lg">
-          {hasVolumePrice && <span className="mr-1 text-xs font-medium text-muted">Desde</span>}
-          {formatDOP(product.fromPriceCents)}
+        <p className="mt-auto pt-1">
+          <PriceTag
+            fromCents={product.fromPriceCents}
+            baseCents={product.basePriceCents}
+            showFrom={product.fromPriceCents < product.basePriceCents}
+            promo={best ? { cents: best.cents, startsAt: best.promo.startsAt, endsAt: best.promo.endsAt } : null}
+          />
         </p>
       </div>
     </Link>
   );
 }
 
-export function ProductGrid({ products, priorityCount = 0 }: { products: ProductSummary[]; priorityCount?: number }) {
+export function ProductGrid({ products, promotions = [], priorityCount = 0 }: { products: ProductSummary[]; promotions?: PublicPromotion[]; priorityCount?: number }) {
   return (
     <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
       {products.map((p, i) => (
         <li key={p.id} className="flex">
-          <ProductCard product={p} priority={i < priorityCount} />
+          <ProductCard product={p} promotions={promotions} priority={i < priorityCount} />
         </li>
       ))}
     </ul>

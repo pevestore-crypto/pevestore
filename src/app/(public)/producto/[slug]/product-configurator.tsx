@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { IconCart, IconWhatsApp } from "@/components/ui/icons";
 import { cart } from "@/lib/cart/cart";
-import type { ProductDetail } from "@/lib/catalog/public";
+import type { ProductDetail, PublicPromotion } from "@/lib/catalog/public";
 import { formatDOP } from "@/lib/domain/money";
-import { type PricingPolicy, PricingError, calculatePrice } from "@/lib/domain/pricing";
+import { type PricingPolicy, PricingError, bestQuote } from "@/lib/domain/pricing";
 import { whatsappLink } from "@/lib/domain/whatsapp";
 
 type Mode = "own_design" | "gallery" | "idea";
@@ -22,11 +22,13 @@ export function ProductConfigurator({
   policy,
   whatsappNumber,
   nowIso,
+  promotions,
 }: {
   product: ProductDetail;
   policy: PricingPolicy;
   whatsappNumber: string | null;
   nowIso: string;
+  promotions: PublicPromotion[];
 }) {
   const modes = (["own_design", "gallery", "idea"] as Mode[]).filter(
     (m) => ({ own_design: product.allowsOwnDesign, gallery: product.allowsGallery, idea: product.allowsIdea })[m],
@@ -42,18 +44,21 @@ export function ProductConfigurator({
 
   const quote = useMemo(() => {
     try {
-      return calculatePrice({
-        product: { id: product.id, name: product.name, basePriceCents: product.basePriceCents, tiers: product.tiers, minQty: product.minQty, maxQty: product.maxQty },
-        quantity: qty,
-        variant,
-        surcharges,
-        policy,
-        now: new Date(nowIso),
-      });
+      return bestQuote(
+        {
+          product: { id: product.id, name: product.name, basePriceCents: product.basePriceCents, tiers: product.tiers, minQty: product.minQty, maxQty: product.maxQty },
+          quantity: qty,
+          variant,
+          surcharges,
+          policy,
+          now: new Date(nowIso),
+        },
+        promotions.map((p) => ({ id: p.id, name: p.name, isActive: true, startsAt: p.startsAt, endsAt: p.endsAt, discount: p.discount })),
+      );
     } catch (e) {
       return e instanceof PricingError ? e.message : "No se pudo calcular el precio.";
     }
-  }, [product, qty, variant, surcharges, policy, nowIso]);
+  }, [product, qty, variant, surcharges, policy, nowIso, promotions]);
 
   const step = (delta: number) => setQtyText(String(Math.min(product.maxQty, Math.max(product.minQty, (Number.isInteger(qty) ? qty : product.minQty) + delta))));
   const unavailable = product.availability === "unavailable";
@@ -126,13 +131,22 @@ export function ProductConfigurator({
           <p className="text-sm font-medium text-danger">{quote}</p>
         ) : (
           <dl className="space-y-1.5 text-sm">
-            <div className="flex justify-between"><dt className="text-muted">Precio por unidad</dt><dd className="font-medium tabular-nums">{formatDOP(quote.unitCents)}</dd></div>
+            <div className="flex justify-between">
+              <dt className="text-muted">Precio por unidad</dt>
+              <dd className="font-medium tabular-nums">
+                {quote.unitCents < quote.listUnitCents && <s className="mr-2 text-xs text-muted">{formatDOP(quote.listUnitCents)}</s>}
+                {formatDOP(quote.unitCents)}
+              </dd>
+            </div>
+            {quote.appliedPromotion && (
+              <div className="flex justify-between text-brand"><dt>Oferta aplicada</dt><dd className="font-semibold">{quote.appliedPromotion.name}</dd></div>
+            )}
             <div className="flex justify-between"><dt className="text-muted">Cantidad</dt><dd className="tabular-nums">{quote.quantity}</dd></div>
             {quote.surcharges.map((s) => (
               <div key={s.id} className="flex justify-between"><dt className="text-muted">{s.label}</dt><dd className="tabular-nums">{formatDOP(s.totalCents)}</dd></div>
             ))}
             {quote.discountCents > 0 && (
-              <div className="flex justify-between text-success"><dt>Descuento por cantidad</dt><dd className="tabular-nums">−{formatDOP(quote.discountCents)}</dd></div>
+              <div className="flex justify-between text-success"><dt>{quote.appliedPromotion ? "Ahorro" : "Descuento por cantidad"}</dt><dd className="tabular-nums">−{formatDOP(quote.discountCents)}</dd></div>
             )}
             <div className="flex items-baseline justify-between border-t border-border pt-2">
               <dt className="font-semibold">Total</dt>

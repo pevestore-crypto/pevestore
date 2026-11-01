@@ -23,6 +23,7 @@ export interface ProductSummary {
   slug: string;
   name: string;
   shortDescription: string | null;
+  categoryId: string | null;
   categorySlug: string | null;
   categoryName: string | null;
   /** Precio más bajo posible por unidad (rangos por cantidad incluidos). */
@@ -53,7 +54,7 @@ export interface ProductDetail extends ProductSummary {
 type Row = Record<string, unknown>;
 
 const SUMMARY_SELECT =
-  "id, slug, name, short_description, base_price_cents, availability, is_featured, sort_order, categories(slug, name, is_active), price_tiers(unit_price_cents), product_images(storage_path, alt, sort_order)";
+  "id, category_id, slug, name, short_description, base_price_cents, availability, is_featured, sort_order, categories(slug, name, is_active), price_tiers(unit_price_cents), product_images(storage_path, alt, sort_order)";
 
 function toSummary(p: Row): ProductSummary {
   const tiers = (p.price_tiers as { unit_price_cents: number }[]) ?? [];
@@ -65,6 +66,8 @@ function toSummary(p: Row): ProductSummary {
     slug: p.slug as string,
     name: p.name as string,
     shortDescription: (p.short_description as string | null) ?? null,
+    // Para emparejar ofertas por categoría, igual que el servidor al cobrar.
+    categoryId: (p.category_id as string | null) ?? null,
     categorySlug: category?.is_active ? category.slug : null,
     categoryName: category?.is_active ? category.name : null,
     basePriceCents: base,
@@ -187,6 +190,101 @@ export async function getServices(): Promise<PublicService[]> {
     description: s.description,
     asksMeasurements: s.asks_measurements,
     asksMaterial: s.asks_material,
+  }));
+}
+
+export interface PublicPromotion {
+  id: string;
+  name: string;
+  productId: string | null;
+  categoryId: string | null;
+  discount: { kind: "percent"; bps: number } | { kind: "fixed_unit_price"; unitPriceCents: number };
+  startsAt: string;
+  endsAt: string;
+  messageStyle: "fire" | "last_days" | "gift";
+  headline: string | null;
+  body: string | null;
+  ctaLabel: string | null;
+  showCountdown: boolean;
+}
+
+/**
+ * Ofertas en curso (RLS solo deja ver las vigentes). Caché corta: una oferta
+ * programada aparece al minuto de empezar; la que vence se oculta en el
+ * navegador por su fecha y el servidor nunca la cobra.
+ */
+export async function getActivePromotions(): Promise<PublicPromotion[]> {
+  "use cache";
+  cacheTag("promotions");
+  cacheLife("minutes");
+  const { data, error } = await createSupabasePublicClient()
+    .from("promotions")
+    .select("id, name, product_id, category_id, discount_kind, discount_bps, fixed_unit_price_cents, starts_at, ends_at, message_style, headline, body, cta_label, show_countdown")
+    .order("ends_at");
+  if (error) throw new Error(`Ofertas no disponibles: ${error.message}`);
+  return data.map((p) => ({
+    id: p.id,
+    name: p.name,
+    productId: p.product_id,
+    categoryId: p.category_id,
+    discount: p.discount_kind === "percent" ? { kind: "percent", bps: p.discount_bps } : { kind: "fixed_unit_price", unitPriceCents: Number(p.fixed_unit_price_cents) },
+    startsAt: p.starts_at,
+    endsAt: p.ends_at,
+    messageStyle: p.message_style,
+    headline: p.headline,
+    body: p.body,
+    ctaLabel: p.cta_label,
+    showCountdown: p.show_countdown,
+  }));
+}
+
+export function promotionsFor(product: { id: string; categoryId: string | null }, promos: PublicPromotion[]) {
+  return promos.filter((p) => p.productId === product.id || (p.categoryId !== null && p.categoryId === product.categoryId));
+}
+
+/** Precio por unidad con la mejor oferta (1 unidad, sin variante): para tarjetas. */
+export function promoUnitPrice(basePriceCents: number, promos: PublicPromotion[]): { cents: number; promo: PublicPromotion } | null {
+  let best: { cents: number; promo: PublicPromotion } | null = null;
+  for (const p of promos) {
+    const cents =
+      p.discount.kind === "percent"
+        ? basePriceCents - Math.floor((basePriceCents * p.discount.bps + 5000) / 10000)
+        : Math.min(basePriceCents, p.discount.unitPriceCents);
+    if (cents < basePriceCents && (!best || cents < best.cents)) best = { cents, promo: p };
+  }
+  return best;
+}
+
+export interface PublicBanner {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  ctaLabel: string | null;
+  ctaHref: string | null;
+  desktopPath: string;
+  mobilePath: string | null;
+  alt: string;
+  startsAt: string | null;
+  endsAt: string | null;
+}
+
+export async function getActiveBanners(): Promise<PublicBanner[]> {
+  "use cache";
+  cacheTag("banners");
+  cacheLife("minutes");
+  const { data, error } = await createSupabasePublicClient().from("banners").select("*").order("sort_order");
+  if (error) throw new Error(`Banners no disponibles: ${error.message}`);
+  return data.map((b) => ({
+    id: b.id,
+    title: b.title,
+    subtitle: b.subtitle,
+    ctaLabel: b.cta_label,
+    ctaHref: b.cta_href,
+    desktopPath: b.image_desktop_path,
+    mobilePath: b.image_mobile_path,
+    alt: b.alt || b.title,
+    startsAt: b.starts_at,
+    endsAt: b.ends_at,
   }));
 }
 

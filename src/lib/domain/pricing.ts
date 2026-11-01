@@ -185,6 +185,19 @@ export function calculatePrice(input: PriceInput): PriceQuote {
   };
 }
 
+/**
+ * Con varias ofertas posibles (del producto y de su categoría), aplica la que
+ * deje el total más bajo. Las vencidas o futuras se ignoran por fecha.
+ */
+export function bestQuote(input: Omit<PriceInput, "promotion">, promotions: PricingPromotion[]): PriceQuote {
+  let best = calculatePrice({ ...input, promotion: null });
+  for (const promotion of promotions) {
+    const q = calculatePrice({ ...input, promotion });
+    if (q.totalCents < best.totalCents) best = q;
+  }
+  return best;
+}
+
 export type PaymentPlan = "deposit_50" | "full";
 
 export interface PaymentSplit {

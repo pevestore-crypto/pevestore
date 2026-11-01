@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
-import { type PriceQuote, PricingError, type PricingPolicy, calculatePrice, splitPayment } from "@/lib/domain/pricing";
+import { type PriceQuote, PricingError, type PricingPolicy, type PricingPromotion, bestQuote, splitPayment } from "@/lib/domain/pricing";
 import { type IsoDate, type WorkCalendar, earliestDeliveryDate } from "@/lib/domain/schedule";
 import { UPLOAD_LIMITS } from "@/lib/domain/uploads";
 import { isValidDominicanMobile, normalizeWhatsAppNumber } from "@/lib/domain/whatsapp";
@@ -108,10 +108,11 @@ export async function priceCart(items: z.output<typeof cartItemSchema>[], ctx: C
   const db = createSupabaseServiceClient();
   const { data, error } = await db
     .from("products")
-    .select("id, slug, name, base_price_cents, min_qty, max_qty, production_days, allows_own_design, allows_gallery, allows_idea, availability, is_active, price_tiers(min_qty, max_qty, unit_price_cents), product_variants(id, name, price_delta_cents, is_active), product_surcharges(id, label, amount_cents, per, customization_mode, is_active), design_products(design_id)")
+    .select("id, category_id, slug, name, base_price_cents, min_qty, max_qty, production_days, allows_own_design, allows_gallery, allows_idea, availability, is_active, price_tiers(min_qty, max_qty, unit_price_cents), product_variants(id, name, price_delta_cents, is_active), product_surcharges(id, label, amount_cents, per, customization_mode, is_active), design_products(design_id)")
     .in("id", ids);
   if (error) throw new Error(`No se pudo calcular el pedido: ${error.message}`);
   const byId = new Map(data.map((p) => [p.id, p]));
+  const promotions = await activePromotions(db, ids, [...new Set(data.map((p) => p.category_id).filter(Boolean))] as string[], now);
 
   return items.map((item, index) => {
     const p = byId.get(item.productId);
@@ -145,7 +146,8 @@ export async function priceCart(items: z.output<typeof cartItemSchema>[], ctx: C
     if (err) return { ...common, quote: null, error: err };
 
     try {
-      const quote = calculatePrice({
+      const candidates = promotions.filter((pr) => pr.productId === p.id || (pr.categoryId !== null && pr.categoryId === p.category_id));
+      const quote = bestQuote({
         product: {
           id: p.id,
           name: p.name,
@@ -165,12 +167,46 @@ export async function priceCart(items: z.output<typeof cartItemSchema>[], ctx: C
           .map((s) => ({ id: s.id, label: s.label, amountCents: Number(s.amount_cents), per: s.per })),
         policy: ctx.policy,
         now,
-      });
+      }, candidates);
       return { ...common, quote, error: null };
     } catch (e) {
       return { ...common, quote: null, error: e instanceof PricingError ? e.message : "No se pudo calcular el precio." };
     }
   });
+}
+
+type ServerPromotion = PricingPromotion & { productId: string | null; categoryId: string | null };
+
+/** Ofertas vigentes en este instante para esos productos o sus categorías (sin caché). */
+async function activePromotions(
+  db: ReturnType<typeof createSupabaseServiceClient>,
+  productIds: string[],
+  categoryIds: string[],
+  now: Date,
+): Promise<ServerPromotion[]> {
+  const iso = now.toISOString();
+  const filters = [`product_id.in.(${productIds.join(",")})`, ...(categoryIds.length ? [`category_id.in.(${categoryIds.join(",")})`] : [])];
+  const { data, error } = await db
+    .from("promotions")
+    .select("id, name, product_id, category_id, discount_kind, discount_bps, fixed_unit_price_cents, starts_at, ends_at, is_active")
+    .eq("is_active", true)
+    .lte("starts_at", iso)
+    .gt("ends_at", iso)
+    .or(filters.join(","));
+  if (error) throw new Error(`No se pudieron cargar las ofertas: ${error.message}`);
+  return data.map((r) => ({
+    id: r.id,
+    name: r.name,
+    productId: r.product_id,
+    categoryId: r.category_id,
+    isActive: r.is_active,
+    startsAt: r.starts_at,
+    endsAt: r.ends_at,
+    discount:
+      r.discount_kind === "percent"
+        ? { kind: "percent" as const, bps: r.discount_bps }
+        : { kind: "fixed_unit_price" as const, unitPriceCents: Number(r.fixed_unit_price_cents) },
+  }));
 }
 
 export function cartTotals(lines: PricedLine[]) {

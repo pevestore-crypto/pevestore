@@ -3,11 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { getProductBySlug, getPublicSettings, publicImageUrl } from "@/lib/catalog/public";
+import { getActivePromotions, getProductBySlug, getPublicSettings, promotionsFor, publicImageUrl } from "@/lib/catalog/public";
 import { site } from "@/lib/config/site";
 import { formatDOP } from "@/lib/domain/money";
 import { ProductConfigurator } from "./product-configurator";
 import { ProductGallery } from "./product-gallery";
+import { ProductPromo } from "./product-promo";
 
 export async function generateMetadata({ params }: PageProps<"/producto/[slug]">): Promise<Metadata> {
   const { slug } = await params;
@@ -35,11 +36,14 @@ export default function ProductPage({ params }: PageProps<"/producto/[slug]">) {
 
 async function Content({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [product, settings] = await Promise.all([getProductBySlug(slug), getPublicSettings()]);
+  const [product, settings, allPromotions] = await Promise.all([getProductBySlug(slug), getPublicSettings(), getActivePromotions()]);
   if (!product) notFound();
   // La vigencia de ofertas depende de la hora actual: se calcula en cada visita.
   await connection();
-  const nowIso = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const promotions = promotionsFor(product, allPromotions).filter((p) => new Date(p.startsAt) <= now && now < new Date(p.endsAt));
+  const featuredPromo = promotions[0];
 
   const images = product.images.map((i) => ({ url: publicImageUrl(i.path), alt: i.alt }));
   const productionDays = product.productionDays ?? settings.defaultProductionDays;
@@ -104,7 +108,12 @@ async function Content({ params }: { params: Promise<{ slug: string }> }) {
           )}
 
           <div className="mt-6">
-            <ProductConfigurator product={product} policy={settings.policy} whatsappNumber={settings.whatsappNumber} nowIso={nowIso} />
+            {featuredPromo && (
+              <div className="mb-5">
+                <ProductPromo promo={featuredPromo} />
+              </div>
+            )}
+            <ProductConfigurator product={product} policy={settings.policy} whatsappNumber={settings.whatsappNumber} nowIso={nowIso} promotions={promotions} />
           </div>
 
           <p className="mt-4 text-xs text-muted">

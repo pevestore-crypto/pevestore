@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { CategoryChips } from "@/components/catalog/category-chips";
 import { ProductGrid } from "@/components/catalog/product-card";
 import { GridSkeleton } from "@/components/catalog/grid-skeleton";
-import { getCategories, getProducts } from "@/lib/catalog/public";
+import { getActivePromotions, getCategories, getProducts } from "@/lib/catalog/public";
 
 export async function generateStaticParams() {
   const categories = await getCategories();
@@ -34,7 +34,7 @@ export default function CategoryPage({ params }: PageProps<"/productos/[categori
 
 async function Content({ params }: { params: Promise<{ categoria: string }> }) {
   const { categoria } = await params;
-  const [categories, products] = await Promise.all([getCategories(), getProducts()]);
+  const [categories, products, promotions] = await Promise.all([getCategories(), getProducts(), getActivePromotions()]);
   const category = categories.find((c) => c.slug === categoria);
   if (!category) notFound();
   const items = products.filter((p) => p.categorySlug === category.slug);
@@ -48,7 +48,7 @@ async function Content({ params }: { params: Promise<{ categoria: string }> }) {
       </div>
       <div className="mt-5">
         {items.length ? (
-          <ProductGrid products={items} priorityCount={4} />
+          <ProductGrid products={items} promotions={promotions} priorityCount={4} />
         ) : (
           <p className="rounded-2xl border border-dashed border-border bg-surface px-5 py-12 text-center text-sm text-muted">
             Pronto tendremos productos en esta categoría.

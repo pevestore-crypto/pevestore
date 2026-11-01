@@ -1,8 +1,9 @@
-import Image from "next/image";
+import Image, { getImageProps } from "next/image";
 import Link from "next/link";
+import { BannerCarousel, type CarouselSlide } from "@/components/catalog/banner-carousel";
 import { ProductGrid } from "@/components/catalog/product-card";
-import { getCategories, getProducts, publicImageUrl } from "@/lib/catalog/public";
-import { IconArrowRight, IconBank, IconChat, IconHeadset, IconPackage, IconShield, IconTruck, IconUpload } from "@/components/ui/icons";
+import { IconArrowRight, IconBank, IconChat, IconHeadset, IconPackage, IconShield, IconTools, IconTruck, IconUpload } from "@/components/ui/icons";
+import { getActiveBanners, getActivePromotions, getCategories, getProducts, getServices, promotionsFor, publicImageUrl } from "@/lib/catalog/public";
 
 const benefits = [
   { title: "Producción con calidad", Icon: IconTruck },
@@ -20,31 +21,8 @@ const steps = [
 export default function HomePage() {
   return (
     <>
-      {/* Banner principal: lo reemplaza el carrusel administrable cuando haya banners activos. */}
       <section aria-label="Promoción principal" className="mx-auto max-w-7xl px-4 pt-4 lg:px-6 lg:pt-8">
-        <div className="relative overflow-hidden rounded-3xl bg-[#111111] px-6 py-10 text-white sm:px-10 sm:py-14 lg:py-20">
-          <div aria-hidden className="absolute -right-24 -top-24 size-80 rounded-full bg-brand/40 blur-3xl" />
-          <div aria-hidden className="absolute -bottom-32 right-1/4 size-72 rounded-full bg-brand/25 blur-3xl" />
-          <div className="relative max-w-xl">
-            <p className="mb-3 inline-block rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider">
-              Impresión y personalización
-            </p>
-            <h1 className="text-3xl font-extrabold leading-tight sm:text-5xl">
-              Lo que imaginas, <span className="text-brand">impreso</span> con calidad.
-            </h1>
-            <p className="mt-4 text-base text-white/80 sm:text-lg">
-              Tazas, termos, camisetas, mesas de dominó, rotulación y publicidad para ti y tu empresa.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link href="/productos" className="inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 font-semibold text-brand-contrast transition-colors hover:bg-brand-hover">
-                Ver productos <IconArrowRight className="size-5" />
-              </Link>
-              <Link href="/servicios" className="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-3 font-semibold transition-colors hover:bg-white/10">
-                Cotizar un servicio
-              </Link>
-            </div>
-          </div>
-        </div>
+        <Hero />
       </section>
 
       <section aria-label="Por qué PEVESTORE" className="mx-auto max-w-7xl px-4 pt-4 lg:px-6">
@@ -63,7 +41,7 @@ export default function HomePage() {
       </Section>
 
       <Section title="Ofertas especiales" href="/ofertas" linkLabel="Ver ofertas">
-        <EmptyState text="No hay ofertas activas en este momento." />
+        <Offers />
       </Section>
 
       <Section title="Productos populares" href="/productos" linkLabel="Ver catálogo">
@@ -71,7 +49,7 @@ export default function HomePage() {
       </Section>
 
       <Section title="Servicios por cotización" href="/servicios" linkLabel="Ver servicios">
-        <EmptyState text="Banners, vinilos, letreros, rotulación vehicular y más: cotiza por WhatsApp." />
+        <Services />
       </Section>
 
       <section aria-labelledby="como-comprar" className="mx-auto max-w-7xl px-4 pt-14 lg:px-6">
@@ -93,6 +71,59 @@ export default function HomePage() {
         </ol>
       </section>
     </>
+  );
+}
+
+/** Carrusel administrable si hay banners vigentes; si no, el mensaje general de la tienda. */
+async function Hero() {
+  const banners = await getActiveBanners();
+  if (banners.length === 0) return <StaticHero />;
+  const slides: CarouselSlide[] = banners.map((b) => {
+    const desktop = getImageProps({ src: publicImageUrl(b.desktopPath), alt: b.alt, width: 2000, height: 875, sizes: "(min-width: 1280px) 1232px, 100vw" }).props;
+    const mobile = b.mobilePath ? getImageProps({ src: publicImageUrl(b.mobilePath), alt: b.alt, width: 1080, height: 1080, sizes: "100vw" }).props : null;
+    return {
+      id: b.id,
+      title: b.title,
+      subtitle: b.subtitle,
+      ctaLabel: b.ctaLabel,
+      ctaHref: b.ctaHref,
+      alt: b.alt,
+      startsAt: b.startsAt,
+      endsAt: b.endsAt,
+      desktopSrcSet: desktop.srcSet ?? "",
+      mobileSrcSet: mobile?.srcSet ?? null,
+      fallbackSrc: desktop.src,
+    };
+  });
+  return (
+    <>
+      <h1 className="sr-only">PEVESTORE: impresión, personalización, rotulación y publicidad</h1>
+      <BannerCarousel slides={slides} />
+    </>
+  );
+}
+
+function StaticHero() {
+  return (
+    <div className="relative overflow-hidden rounded-3xl bg-[#111111] px-6 py-10 text-white sm:px-10 sm:py-14 lg:py-20">
+      <div aria-hidden className="absolute -right-24 -top-24 size-80 rounded-full bg-brand/40 blur-3xl" />
+      <div aria-hidden className="absolute -bottom-32 right-1/4 size-72 rounded-full bg-brand/25 blur-3xl" />
+      <div className="relative max-w-xl">
+        <p className="mb-3 inline-block rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider">Impresión y personalización</p>
+        <h1 className="text-3xl font-extrabold leading-tight sm:text-5xl">
+          Lo que imaginas, <span className="text-brand">impreso</span> con calidad.
+        </h1>
+        <p className="mt-4 text-base text-white/80 sm:text-lg">Tazas, termos, camisetas, mesas de dominó, rotulación y publicidad para ti y tu empresa.</p>
+        <div className="mt-7 flex flex-wrap gap-3">
+          <Link href="/productos" className="inline-flex items-center gap-2 rounded-full bg-brand px-6 py-3 font-semibold text-brand-contrast transition-colors hover:bg-brand-hover">
+            Ver productos <IconArrowRight className="size-5" />
+          </Link>
+          <Link href="/servicios" className="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-3 font-semibold transition-colors hover:bg-white/10">
+            Cotizar un servicio
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -136,12 +167,36 @@ async function Categories() {
   );
 }
 
+/** Productos con oferta. Las tarjetas ocultan el precio de oferta solas si vence. */
+async function Offers() {
+  const [products, promotions] = await Promise.all([getProducts(), getActivePromotions()]);
+  const list = products.filter((p) => promotionsFor(p, promotions).length > 0).slice(0, 8);
+  if (list.length === 0) return <EmptyState text="No hay ofertas activas en este momento." />;
+  return <ProductGrid products={list} promotions={promotions} />;
+}
+
 async function Featured() {
-  const products = await getProducts();
+  const [products, promotions] = await Promise.all([getProducts(), getActivePromotions()]);
   const featured = products.filter((p) => p.isFeatured);
   const list = (featured.length ? featured : products).slice(0, 8);
   if (list.length === 0) return <EmptyState text="Los productos aparecerán aquí muy pronto." />;
-  return <ProductGrid products={list} />;
+  return <ProductGrid products={list} promotions={promotions} />;
+}
+
+async function Services() {
+  const services = await getServices();
+  return (
+    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      {services.map((s) => (
+        <li key={s.id}>
+          <Link href={`/servicios#${s.slug}`} className="flex h-full flex-col items-center gap-2 rounded-2xl border border-border bg-surface-raised p-4 text-center hover:bg-surface">
+            <span className="grid size-10 place-items-center rounded-full bg-brand-soft text-brand"><IconTools className="size-5" /></span>
+            <span className="text-sm font-semibold">{s.name}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 function EmptyState({ text }: { text: string }) {

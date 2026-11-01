@@ -8,5 +8,7 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.test.ts"],
     testTimeout: 30000,
+    // Cada archivo de BD arranca su propio Postgres en memoria (PGlite).
+    hookTimeout: 60000,
   },
 });
