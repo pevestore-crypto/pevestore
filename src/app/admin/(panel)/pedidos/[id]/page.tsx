@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { BankBadge } from "@/components/catalog/bank-badge";
@@ -90,6 +91,13 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
                   </div>
                   <p className="text-xs text-muted">{formatDOP(i.unitCents)} c/u{i.mode && ` · ${MODE_LABEL[i.mode]}`}</p>
                   {i.ideaText && <p className="mt-2 whitespace-pre-line rounded-xl bg-surface px-3 py-2 text-sm">“{i.ideaText}”</p>}
+                  {i.design && (
+                    <a href={i.design.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-2 rounded-xl border border-border p-1.5 pr-3 text-sm hover:bg-surface">
+                      <Image src={i.design.url} alt="" width={40} height={40} className="size-10 rounded-lg object-cover" />
+                      Diseño elegido: <strong>{i.design.title}</strong>
+                    </a>
+                  )}
+                  {i.mode === "gallery" && !i.design && <p className="mt-2 text-xs font-medium text-warning">El diseño elegido ya no existe en la galería.</p>}
                   {i.mode === "own_design" && i.files.length === 0 && <p className="mt-2 text-xs font-medium text-warning">El cliente no subió el diseño: pídeselo por WhatsApp.</p>}
                   <Files files={i.files} />
                 </li>

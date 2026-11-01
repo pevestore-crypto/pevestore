@@ -3,7 +3,8 @@
 import { randomUUID } from "node:crypto";
 import { fieldErrors } from "@/lib/admin/catalog-schema";
 import { normalizeWhatsAppNumber } from "@/lib/domain/whatsapp";
-import { allowRequest, verifyStoredFile } from "@/lib/orders/access";
+import { allowRequest, clientIp, verifyStoredFile } from "@/lib/orders/access";
+import { TURNSTILE_ERROR, verifyTurnstile } from "@/lib/security/turnstile";
 import { extForMime } from "@/lib/orders/checkout";
 import { type QuoteInput, quoteSchema } from "@/lib/quotes/quote-schema";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -12,10 +13,11 @@ export type QuoteResult =
   | { ok: true; quoteId: string; code: string; serviceName: string; uploads: { index: number; path: string; token: string }[] }
   | { ok: false; errors: Record<string, string> };
 
-export async function submitQuote(input: QuoteInput): Promise<QuoteResult> {
+export async function submitQuote(input: QuoteInput, turnstileToken: string | null): Promise<QuoteResult> {
   if (!(await allowRequest("quote-request", 6, 3600))) {
     return { ok: false, errors: { _: "Has enviado varias solicitudes seguidas. Espera un rato o escríbenos por WhatsApp." } };
   }
+  if (!(await verifyTurnstile(turnstileToken, await clientIp()))) return { ok: false, errors: { _: TURNSTILE_ERROR } };
   const parsed = quoteSchema.safeParse(input);
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
   const q = parsed.data;

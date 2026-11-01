@@ -99,6 +99,21 @@ export async function publishTerms(input: unknown): Promise<ActionResult> {
   return ok(String(version));
 }
 
+export async function publishPrivacy(body: string): Promise<ActionResult> {
+  await requireOwner();
+  const text = body.trim();
+  if (text.length < 200) return { ok: false, errors: { privacy: "La política parece incompleta (mínimo 200 caracteres)." } };
+  if (text.length > 20000) return { ok: false, errors: { privacy: "Máximo 20,000 caracteres." } };
+  if (/\[(completar|razón social|dirección|indicar|revisa)/i.test(text)) {
+    return { ok: false, errors: { privacy: "Completa los datos entre corchetes [ … ] antes de publicar." } };
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("settings").update({ privacy_body: text, privacy_updated_at: new Date().toISOString() }).eq("id", true);
+  if (error) return { ok: false, errors: dbErrorMessage(error) };
+  updateTag("settings");
+  return ok();
+}
+
 export async function addBlockedDate(input: unknown): Promise<ActionResult> {
   await requireAdmin();
   const parsed = blockedDateSchema.safeParse(input);

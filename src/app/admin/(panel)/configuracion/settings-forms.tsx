@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { Card, Field, FormError, Toggle, dangerButton, inputClass, primaryButton, secondaryButton, textareaClass } from "@/components/admin/form-ui";
 import type { ActionResult } from "@/lib/admin/catalog-schema";
 import { BANKS, type BankAccountInput, type BusinessInput, type OrderRulesInput, WEEKDAYS } from "@/lib/admin/settings-schema";
-import { addBlockedDate, deleteBankAccount, publishTerms, removeBlockedDate, saveBankAccount, saveBusiness, saveOrderRules } from "./actions";
+import { addBlockedDate, deleteBankAccount, publishPrivacy, publishTerms, removeBlockedDate, saveBankAccount, saveBusiness, saveOrderRules } from "./actions";
 
 /** Estado común: guardar con una acción del servidor y mostrar errores o "Guardado". */
 function useSave() {
@@ -233,6 +233,31 @@ export function BankAccounts({ initial, isOwner }: { initial: BankAccountInput[]
         isOwner && <button type="button" className={secondaryButton} onClick={() => setEditing(emptyBank)}>+ Agregar cuenta</button>
       )}
     </Card>
+  );
+}
+
+export function PrivacyForm({ initial, isOwner }: { initial: { body: string; updatedAt: string | null; draft: string }; isOwner: boolean }) {
+  const [body, setBody] = useState(initial.body);
+  const s = useSave();
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); s.run(() => publishPrivacy(body)); }} noValidate>
+      <Card
+        title="Política de privacidad"
+        description={initial.updatedAt ? `Publicada. Última actualización: ${new Date(initial.updatedAt).toLocaleDateString("es-DO")}.` : "Aún no publicada. La página /privacidad dirá que está en preparación."}
+      >
+        <FormError message={s.errors._ ?? s.errors.privacy} />
+        {isOwner && !body && (
+          <div className="rounded-xl bg-info-soft px-4 py-3 text-sm text-info">
+            Hay un borrador basado en los datos que esta tienda realmente recoge (Ley 172-13). Revísalo, completa lo que está entre corchetes y, si puedes, consúltalo con un abogado.
+            <button type="button" onClick={() => setBody(initial.draft)} className="mt-2 block font-semibold underline">Usar borrador sugerido</button>
+          </div>
+        )}
+        <Field label="Texto" htmlFor="privacyBody">
+          <textarea id="privacyBody" disabled={!isOwner} className={`${textareaClass} min-h-72`} value={body} onChange={(e) => { s.setSaved(false); setBody(e.target.value); }} />
+        </Field>
+        {isOwner && <SaveBar pending={s.pending} saved={s.saved} label="Publicar política" />}
+      </Card>
+    </form>
   );
 }
 

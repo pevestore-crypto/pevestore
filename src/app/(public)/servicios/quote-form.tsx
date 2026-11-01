@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { TurnstileWidget, turnstileEnabled } from "@/components/security/turnstile-widget";
 import { IconUpload, IconWhatsApp } from "@/components/ui/icons";
 import type { PublicService } from "@/lib/catalog/public";
 import { formatIsoDateLong } from "@/lib/domain/schedule";
@@ -33,6 +34,8 @@ export function QuoteForm({ services, whatsappNumber, initialService }: { servic
   const [progress, setProgress] = useState<string | null>(null);
   const [sent, setSent] = useState<Sent | null>(null);
   const [pending, start] = useTransition();
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [captchaKey, setCaptchaKey] = useState(0);
   const service = services.find((s) => s.id === f.serviceId);
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
 
@@ -42,13 +45,18 @@ export function QuoteForm({ services, whatsappNumber, initialService }: { servic
       setErrors({});
       setProgress("Enviando solicitud…");
       const qty = f.quantity.trim() === "" ? "" : Number(f.quantity);
-      const result = await submitQuote({
-        ...f,
-        quantity: qty === "" || Number.isNaN(qty) ? "" : qty,
-        measurements: service?.asksMeasurements ? f.measurements : "",
-        material: service?.asksMaterial ? f.material : "",
-        files: files.map((x) => ({ mime: x.type as "image/jpeg", size: x.size, name: x.name })),
-      });
+      const result = await submitQuote(
+        {
+          ...f,
+          quantity: qty === "" || Number.isNaN(qty) ? "" : qty,
+          measurements: service?.asksMeasurements ? f.measurements : "",
+          material: service?.asksMaterial ? f.material : "",
+          files: files.map((x) => ({ mime: x.type as "image/jpeg", size: x.size, name: x.name })),
+        },
+        captcha,
+      );
+      setCaptcha(null);
+      setCaptchaKey((k) => k + 1);
       if (!result.ok) {
         setProgress(null);
         setErrors(result.errors);
@@ -165,7 +173,8 @@ export function QuoteForm({ services, whatsappNumber, initialService }: { servic
         </Labeled>
       </div>
 
-      <button type="submit" disabled={pending} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand font-semibold text-brand-contrast hover:bg-brand-hover disabled:opacity-60">
+      <TurnstileWidget key={captchaKey} onToken={setCaptcha} />
+      <button type="submit" disabled={pending || (turnstileEnabled && !captcha)} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand font-semibold text-brand-contrast hover:bg-brand-hover disabled:opacity-60">
         {pending ? progress ?? "Enviando…" : "Continuar"}
       </button>
       <p className="text-center text-xs text-muted">Guardamos tu solicitud y luego te preparamos el mensaje de WhatsApp.</p>

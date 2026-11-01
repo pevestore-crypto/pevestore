@@ -77,6 +77,13 @@ describe("create_order", () => {
     expect(order.rows[0]).toEqual({ status: "pending_payment", customer_name: "Cliente Prueba" });
   });
 
+  it("guarda el diseño de la galería elegido", async () => {
+    const design = (await db.query<{ id: string }>("insert into designs (title, storage_path) values ('Navidad 1', 'designs/x.webp') returning id")).rows[0];
+    const o = await createOrder(payload({ items: [{ ...payload().items[0], customizationMode: "gallery", designId: design.id }] }));
+    const row = (await db.query<{ design_id: string }>("select design_id from order_items where order_id = $1", [o.id])).rows[0];
+    expect(row.design_id).toBe(design.id);
+  });
+
   it("reutiliza el cliente por WhatsApp y actualiza su nombre", async () => {
     await createOrder(payload({ customerName: "Nombre Nuevo" }));
     const c = await db.query<{ n: number; full_name: string }>("select count(*)::int n, max(full_name) full_name from customers where whatsapp = '18095551234'");

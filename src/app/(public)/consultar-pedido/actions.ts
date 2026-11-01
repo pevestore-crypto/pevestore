@@ -3,7 +3,8 @@
 import { parseOrderNumber } from "@/lib/domain/order-number";
 import type { OrderStatus } from "@/lib/domain/order-status";
 import { isValidDominicanMobile, normalizeWhatsAppNumber } from "@/lib/domain/whatsapp";
-import { allowRequest } from "@/lib/orders/access";
+import { allowRequest, clientIp } from "@/lib/orders/access";
+import { TURNSTILE_ERROR, verifyTurnstile } from "@/lib/security/turnstile";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export type LookupResult =
@@ -12,9 +13,10 @@ export type LookupResult =
 
 const NOT_FOUND = "No encontramos un pedido con esos datos. Revisa el número y el WhatsApp con que hiciste el pedido.";
 
-export async function lookupOrder(code: string, whatsapp: string): Promise<LookupResult> {
+export async function lookupOrder(code: string, whatsapp: string, turnstileToken: string | null): Promise<LookupResult> {
   // Límite estricto: evita probar números de pedido o teléfonos al azar.
   if (!(await allowRequest("lookup", 10, 3600))) return { ok: false, error: "Demasiados intentos. Espera una hora o escríbenos por WhatsApp." };
+  if (!(await verifyTurnstile(turnstileToken, await clientIp()))) return { ok: false, error: TURNSTILE_ERROR };
   const number = parseOrderNumber(code);
   if (!number || !isValidDominicanMobile(whatsapp)) return { ok: false, error: NOT_FOUND };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { TurnstileWidget, turnstileEnabled } from "@/components/security/turnstile-widget";
 import { formatDOP } from "@/lib/domain/money";
 import { ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/domain/order-status";
 import { formatIsoDateLong } from "@/lib/domain/schedule";
@@ -28,6 +29,8 @@ export function LookupForm() {
   const [phone, setPhone] = useState("");
   const [result, setResult] = useState<LookupResult | null>(null);
   const [pending, start] = useTransition();
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [captchaKey, setCaptchaKey] = useState(0);
 
   return (
     <div className="space-y-5">
@@ -35,7 +38,11 @@ export function LookupForm() {
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          start(async () => setResult(await lookupOrder(code, phone)));
+          start(async () => {
+            setResult(await lookupOrder(code, phone, captcha));
+            setCaptcha(null);
+            setCaptchaKey((k) => k + 1);
+          });
         }}
       >
         <div className="space-y-1.5">
@@ -47,7 +54,8 @@ export function LookupForm() {
           <input id="phone" type="tel" inputMode="tel" autoComplete="tel" className={input} placeholder="809-123-4567" value={phone} onChange={(e) => setPhone(e.target.value)} />
           <p className="text-xs text-muted">El mismo con el que hiciste el pedido.</p>
         </div>
-        <button type="submit" disabled={pending || !code || !phone} className="h-12 w-full rounded-xl bg-brand font-semibold text-brand-contrast hover:bg-brand-hover disabled:opacity-50">
+        <TurnstileWidget key={captchaKey} onToken={setCaptcha} />
+        <button type="submit" disabled={pending || !code || !phone || (turnstileEnabled && !captcha)} className="h-12 w-full rounded-xl bg-brand font-semibold text-brand-contrast hover:bg-brand-hover disabled:opacity-50">
           {pending ? "Consultando…" : "Consultar pedido"}
         </button>
       </form>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getAdminSettings } from "@/lib/admin/settings";
-import { BankAccounts, BlockedDates, BusinessForm, OrderRulesForm, TermsForm } from "./settings-forms";
+import { BankAccounts, BlockedDates, BusinessForm, OrderRulesForm, PrivacyForm, TermsForm } from "./settings-forms";
 
 export const metadata: Metadata = { title: "Configuración" };
 
@@ -34,6 +34,7 @@ async function Forms() {
       <BusinessForm initial={s.business} />
       <BankAccounts initial={s.banks} isOwner={s.isOwner} />
       <TermsForm initial={s.terms} isOwner={s.isOwner} />
+      <PrivacyForm initial={s.privacy} isOwner={s.isOwner} />
       <OrderRulesForm initial={s.rules} isOwner={s.isOwner} />
       <BlockedDates initial={s.blockedDates} />
     </div>

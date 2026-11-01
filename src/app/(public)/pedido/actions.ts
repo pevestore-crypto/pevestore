@@ -3,7 +3,8 @@
 import { randomUUID } from "node:crypto";
 import { fieldErrors } from "@/lib/admin/catalog-schema";
 import { checkRequestedDate, formatIsoDateLong, isIsoDate } from "@/lib/domain/schedule";
-import { allowRequest, findOrderByToken, verifyStoredFile } from "@/lib/orders/access";
+import { allowRequest, clientIp, findOrderByToken, verifyStoredFile } from "@/lib/orders/access";
+import { TURNSTILE_ERROR, verifyTurnstile } from "@/lib/security/turnstile";
 import {
   type CartItemInput,
   type OrderInput,
@@ -41,7 +42,8 @@ export async function quoteCart(items: CartItemInput[]): Promise<CartQuote | { e
   if (!parsed.success) return { error: "El pedido tiene datos inválidos. Vacíalo y vuelve a agregar los productos." };
   const now = new Date();
   const ctx = await loadCheckoutContext();
-  const lines = parsed.data.length ? await priceCart(parsed.data, ctx, now) : [];
+  // La vista previa no exige diseño elegido: solo lista los disponibles.
+  const lines = parsed.data.length ? await priceCart(parsed.data.map((i) => ({ ...i, designId: null })), ctx, now) : [];
   const { ok, totalCents } = cartTotals(lines);
   return {
     lines,
@@ -67,10 +69,11 @@ export type PlaceOrderResult =
   | { ok: true; code: string; token: string; uploads: UploadTicket[] }
   | { ok: false; errors: Record<string, string> };
 
-export async function placeOrder(input: OrderInput): Promise<PlaceOrderResult> {
+export async function placeOrder(input: OrderInput, turnstileToken: string | null): Promise<PlaceOrderResult> {
   if (!(await allowRequest("order", 8, 3600))) {
     return { ok: false, errors: { _: "Has enviado varios pedidos seguidos. Espera un rato o escríbenos por WhatsApp." } };
   }
+  if (!(await verifyTurnstile(turnstileToken, await clientIp()))) return { ok: false, errors: { _: TURNSTILE_ERROR } };
   const parsed = orderSchema.safeParse(input);
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
   const o = parsed.data;
@@ -122,6 +125,7 @@ export async function placeOrder(input: OrderInput): Promise<PlaceOrderResult> {
         unitCents: l.quote!.unitCents,
         totalCents: l.quote!.totalCents,
         customizationMode: l.mode ?? "",
+        designId: l.mode === "gallery" ? (o.items[i].designId ?? "") : "",
         ideaText: o.items[i].ideaText,
         pricingSnapshot: { ...l.quote, lineIndex: i },
       })),

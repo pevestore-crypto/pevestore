@@ -20,6 +20,7 @@ export const cartItemSchema = z.object({
   variantId: z.uuid().nullable(),
   quantity: z.number().int().min(1).max(100000),
   mode: z.enum(["own_design", "gallery", "idea"]).nullable(),
+  designId: z.uuid().nullable().default(null),
   ideaText: z.string().trim().max(2000).default(""),
   files: z.array(declaredFile).max(5).default([]),
 });
@@ -97,6 +98,8 @@ export interface PricedLine {
   quantity: number;
   mode: "own_design" | "gallery" | "idea" | null;
   allowedModes: ("own_design" | "gallery" | "idea")[];
+  /** Diseños de la galería disponibles para este producto. */
+  designs: { id: string; title: string; path: string }[];
   productionDays: number;
   quote: PriceQuote | null;
   error: string | null;
@@ -108,7 +111,7 @@ export async function priceCart(items: z.output<typeof cartItemSchema>[], ctx: C
   const db = createSupabaseServiceClient();
   const { data, error } = await db
     .from("products")
-    .select("id, category_id, slug, name, base_price_cents, min_qty, max_qty, production_days, allows_own_design, allows_gallery, allows_idea, availability, is_active, price_tiers(min_qty, max_qty, unit_price_cents), product_variants(id, name, price_delta_cents, is_active), product_surcharges(id, label, amount_cents, per, customization_mode, is_active), design_products(design_id)")
+    .select("id, category_id, slug, name, base_price_cents, min_qty, max_qty, production_days, allows_own_design, allows_gallery, allows_idea, availability, is_active, price_tiers(min_qty, max_qty, unit_price_cents), product_variants(id, name, price_delta_cents, is_active), product_surcharges(id, label, amount_cents, per, customization_mode, is_active), design_products(designs(id, title, storage_path, is_active, sort_order))")
     .in("id", ids);
   if (error) throw new Error(`No se pudo calcular el pedido: ${error.message}`);
   const byId = new Map(data.map((p) => [p.id, p]));
@@ -118,12 +121,18 @@ export async function priceCart(items: z.output<typeof cartItemSchema>[], ctx: C
     const p = byId.get(item.productId);
     const base = { index, productId: item.productId, quantity: item.quantity, mode: item.mode, variantId: item.variantId };
     if (!p || !p.is_active) {
-      return { ...base, slug: "", name: "Producto no disponible", variantName: null, allowedModes: [], productionDays: 0, quote: null, error: "Este producto ya no está disponible. Quítalo del pedido." };
+      return { ...base, slug: "", name: "Producto no disponible", variantName: null, allowedModes: [], designs: [], productionDays: 0, quote: null, error: "Este producto ya no está disponible. Quítalo del pedido." };
     }
+    type D = { id: string; title: string; storage_path: string; is_active: boolean; sort_order: number };
+    const designs = ((p.design_products as unknown as { designs: D | null }[]) ?? [])
+      .map((x) => x.designs)
+      .filter((d): d is D => !!d && d.is_active)
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((d) => ({ id: d.id, title: d.title, path: d.storage_path }));
     const allowedModes = (
       [
         p.allows_own_design && "own_design",
-        p.allows_gallery && (p.design_products as unknown[]).length > 0 && "gallery",
+        p.allows_gallery && designs.length > 0 && "gallery",
         p.allows_idea && "idea",
       ] as const
     ).filter(Boolean) as PricedLine["allowedModes"];
@@ -135,6 +144,7 @@ export async function priceCart(items: z.output<typeof cartItemSchema>[], ctx: C
       name: p.name,
       variantName: variant?.name ?? null,
       allowedModes,
+      designs: allowedModes.includes("gallery") ? designs : [],
       productionDays: p.production_days ?? ctx.defaultProductionDays,
     };
 
@@ -143,6 +153,7 @@ export async function priceCart(items: z.output<typeof cartItemSchema>[], ctx: C
     else if (item.variantId && !variant) err = "El modelo elegido ya no está disponible.";
     else if (!item.variantId && variants.length > 0) err = "Elige un modelo.";
     else if (allowedModes.length > 0 && (!item.mode || !allowedModes.includes(item.mode))) err = "Elige una opción de personalización válida.";
+    else if (item.mode === "gallery" && item.designId && !designs.some((d) => d.id === item.designId)) err = "Ese diseño ya no está disponible. Elige otro.";
     if (err) return { ...common, quote: null, error: err };
 
     try {
@@ -227,6 +238,7 @@ export function customizationErrors(items: z.output<typeof cartItemSchema>[]): R
     const designs = item.files.filter((f) => f.purpose === "design");
     if (item.mode === "own_design" && designs.length === 0) errors[`items.${i}.files`] = "Sube el archivo de tu diseño (JPG, PNG o PDF).";
     if (item.mode === "idea" && item.ideaText.length < 10) errors[`items.${i}.ideaText`] = "Describe tu idea (al menos 10 caracteres).";
+    if (item.mode === "gallery" && !item.designId) errors[`items.${i}.designId`] = "Elige un diseño de la galería.";
     if (item.mode !== "own_design" && designs.length > 0) errors[`items.${i}.files`] = "Solo se suben diseños con la opción “Tengo mi diseño”.";
     for (const f of item.files) {
       const rule = f.purpose === "design" ? UPLOAD_LIMITS.design : UPLOAD_LIMITS.reference;

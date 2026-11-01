@@ -316,6 +316,21 @@ export async function getPublicSettings(): Promise<PublicSettings> {
   };
 }
 
+export async function getLegalTexts(): Promise<{ terms: { version: number; body: string; createdAt: string } | null; privacy: { body: string; updatedAt: string | null } | null }> {
+  "use cache";
+  cacheTag("settings");
+  cacheLife("hours");
+  const db = createSupabasePublicClient();
+  const [terms, settings] = await Promise.all([
+    db.from("terms_versions").select("version, body, created_at").eq("is_current", true).maybeSingle(),
+    db.from("settings").select("privacy_body, privacy_updated_at").single(),
+  ]);
+  return {
+    terms: terms.data ? { version: terms.data.version, body: terms.data.body, createdAt: terms.data.created_at } : null,
+    privacy: settings.data?.privacy_body ? { body: settings.data.privacy_body, updatedAt: settings.data.privacy_updated_at } : null,
+  };
+}
+
 export function publicImageUrl(path: string): string {
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/catalog/${path}`;
 }

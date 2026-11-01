@@ -1,5 +1,6 @@
 import "server-only";
 import { requireAdmin } from "@/lib/auth/dal";
+import { privacyDraft } from "@/lib/legal/privacy-draft";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { BankAccountInput, BusinessInput, OrderRulesInput } from "./settings-schema";
 
@@ -9,6 +10,7 @@ export interface AdminSettings {
   banks: BankAccountInput[];
   blockedDates: { date: string; reason: string }[];
   terms: { version: number; body: string } | null;
+  privacy: { body: string; updatedAt: string | null; draft: string };
   isOwner: boolean;
 }
 
@@ -49,6 +51,11 @@ export async function getAdminSettings(): Promise<AdminSettings> {
     })),
     blockedDates: (dates.data ?? []).map((d) => ({ date: d.date, reason: d.reason ?? "" })),
     terms: terms.data ?? null,
+    privacy: {
+      body: st.privacy_body ?? "",
+      updatedAt: st.privacy_updated_at ?? null,
+      draft: privacyDraft({ name: st.business_name, email: st.contact_email, whatsapp: st.whatsapp_number, address: st.address }),
+    },
     isOwner: admin.role === "owner",
   };
 }

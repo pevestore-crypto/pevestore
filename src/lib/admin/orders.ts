@@ -89,6 +89,7 @@ export interface OrderDetail {
     totalCents: number;
     mode: string | null;
     ideaText: string | null;
+    design: { title: string; url: string } | null;
     files: FileLink[];
   }[];
   receipts: FileLink[];
@@ -123,7 +124,7 @@ export async function getOrder(id: string): Promise<OrderDetail> {
   const supabase = await createSupabaseServerClient();
   const { data: o } = await supabase
     .from("orders")
-    .select("*, order_items(*), order_files(*), payments(*), order_status_history(*)")
+    .select("*, order_items(*, designs(title, storage_path)), order_files(*), payments(*), order_status_history(*)")
     .eq("id", id)
     .maybeSingle();
   if (!o) notFound();
@@ -150,7 +151,7 @@ export async function getOrder(id: string): Promise<OrderDetail> {
   const { data: admins } = await supabase.from("admin_users").select("user_id, full_name");
   const nameOf = new Map((admins ?? []).map((a) => [a.user_id, a.full_name]));
 
-  type Item = { id: string; product_name: string; variant_name: string | null; quantity: number; unit_cents: number; total_cents: number; customization_mode: string | null; idea_text: string | null; pricing_snapshot: { lineIndex?: number } };
+  type Item = { id: string; product_name: string; variant_name: string | null; quantity: number; unit_cents: number; total_cents: number; customization_mode: string | null; idea_text: string | null; pricing_snapshot: { lineIndex?: number }; designs: { title: string; storage_path: string } | null };
   type Pay = { id: string; status: OrderDetail["payments"][number]["status"]; declared_cents: number; verified_cents: number | null; note: string | null; created_at: string; verified_at: string | null; receipt_file_id: string | null };
   type Hist = { from_status: string | null; to_status: string; note: string | null; created_at: string; changed_by: string | null; id: number };
 
@@ -181,6 +182,7 @@ export async function getOrder(id: string): Promise<OrderDetail> {
         totalCents: Number(i.total_cents),
         mode: i.customization_mode,
         ideaText: i.idea_text,
+        design: i.designs ? { title: i.designs.title, url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/catalog/${i.designs.storage_path}` } : null,
         files: files.filter((f) => f.order_item_id === i.id).map(link),
       })),
     receipts: files.filter((f) => f.purpose === "receipt").map(link),

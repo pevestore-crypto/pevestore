@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { BankBadge } from "@/components/catalog/bank-badge";
+import { TurnstileWidget, turnstileEnabled } from "@/components/security/turnstile-widget";
 import { IconUpload } from "@/components/ui/icons";
 import { type CartItem, cart, useCart } from "@/lib/cart/cart";
 import { formatDOP } from "@/lib/domain/money";
@@ -19,6 +20,7 @@ const ACCEPT_REFERENCE = "image/jpeg,image/png,image/webp,application/pdf";
 const input = "h-12 w-full rounded-xl border border-border bg-surface-raised px-4 text-base outline-none focus:border-brand aria-[invalid=true]:border-danger";
 
 interface ItemExtras {
+  designId: string | null;
   ideaText: string;
   design: File | null;
   references: File[];
@@ -38,6 +40,8 @@ export function Checkout() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [progress, setProgress] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [captchaKey, setCaptchaKey] = useState(0);
   const topRef = useRef<HTMLDivElement>(null);
 
   const itemsKey = JSON.stringify(items.map((i) => [i.productId, i.variantId, i.quantity, i.mode]));
@@ -60,7 +64,7 @@ export function Checkout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemsKey]);
 
-  const extra = (key: string): ItemExtras => extras[key] ?? { ideaText: "", design: null, references: [] };
+  const extra = (key: string): ItemExtras => extras[key] ?? { designId: null, ideaText: "", design: null, references: [] };
   const setExtra = (key: string, patch: Partial<ItemExtras>) => setExtras((p) => ({ ...p, [key]: { ...extra(key), ...patch } }));
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -94,18 +98,25 @@ export function Checkout() {
           variantId: i.variantId,
           quantity: i.quantity,
           mode: i.mode,
+          designId: i.mode === "gallery" ? x.designId : null,
           ideaText: i.mode === "idea" ? x.ideaText : "",
           files: files.map((f) => ({ purpose: f.purpose, mime: f.file.type as "image/jpeg", size: f.file.size, name: f.file.name })),
           _files: files.map((f) => f.file),
         };
       });
 
-      const result = await placeOrder({
-        ...form,
-        acceptTerms: form.acceptTerms as true,
-        termsVersion: quote.terms?.version ?? 0,
-        items: payloadItems.map((p) => ({ productId: p.productId, variantId: p.variantId, quantity: p.quantity, mode: p.mode, ideaText: p.ideaText, files: p.files })),
-      });
+      const result = await placeOrder(
+        {
+          ...form,
+          acceptTerms: form.acceptTerms as true,
+          termsVersion: quote.terms?.version ?? 0,
+          items: payloadItems.map((p) => ({ productId: p.productId, variantId: p.variantId, quantity: p.quantity, mode: p.mode, designId: p.designId, ideaText: p.ideaText, files: p.files })),
+        },
+        captcha,
+      );
+      // El token anti-bots solo vale para un envío.
+      setCaptcha(null);
+      setCaptchaKey((k) => k + 1);
       if (!result.ok) {
         setProgress(null);
         setErrors(result.errors);
@@ -149,7 +160,7 @@ export function Checkout() {
                 line={quote?.lines[index]}
                 extra={extra(item.key)}
                 onExtra={(patch) => setExtra(item.key, patch)}
-                errors={{ line: err(`items.${index}`), files: err(`items.${index}.files`), idea: err(`items.${index}.ideaText`) }}
+                errors={{ line: err(`items.${index}`), files: err(`items.${index}.files`), idea: err(`items.${index}.ideaText`), design: err(`items.${index}.designId`) }}
               />
             ))}
           </ul>
@@ -259,9 +270,10 @@ export function Checkout() {
           </div>
         )}
 
+        <TurnstileWidget key={captchaKey} onToken={setCaptcha} />
         <button
           type="submit"
-          disabled={pending || !quote?.ok || !quote.ready}
+          disabled={pending || !quote?.ok || !quote.ready || (turnstileEnabled && !captcha)}
           className="h-12 w-full rounded-xl bg-brand font-semibold text-brand-contrast transition-colors hover:bg-brand-hover disabled:opacity-50"
         >
           {pending ? progress ?? "Enviando…" : "Confirmar pedido"}
@@ -283,7 +295,7 @@ function CartLine({
   line?: CartQuote["lines"][number];
   extra: ItemExtras;
   onExtra: (patch: Partial<ItemExtras>) => void;
-  errors: { line?: string; files?: string; idea?: string };
+  errors: { line?: string; files?: string; idea?: string; design?: string };
 }) {
   const [qty, setQty] = useState(String(item.quantity));
   const commitQty = () => {
@@ -351,6 +363,23 @@ function CartLine({
               onFiles={(f) => onExtra({ design: f[0] ?? null })}
               error={errors.files}
             />
+          )}
+          {item.mode === "gallery" && (
+            <fieldset>
+              <legend className="mb-2 text-sm font-medium">Elige tu diseño</legend>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {(line?.designs ?? []).map((d) => (
+                  <label key={d.id} className={`cursor-pointer overflow-hidden rounded-xl border-2 ${extra.designId === d.id ? "border-brand" : "border-transparent"}`}>
+                    <input type="radio" name={`design-${item.key}`} className="sr-only" checked={extra.designId === d.id} onChange={() => onExtra({ designId: d.id })} />
+                    <span className="relative block aspect-square bg-background">
+                      <Image src={publicUrl(d.path)} alt="" fill sizes="120px" className="object-cover" />
+                    </span>
+                    <span className="block truncate bg-background px-1.5 py-1 text-center text-xs">{d.title}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.design && <p className="mt-1 text-xs font-medium text-danger">{errors.design}</p>}
+            </fieldset>
           )}
           {item.mode === "idea" && (
             <>
