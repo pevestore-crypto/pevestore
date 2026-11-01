@@ -85,7 +85,8 @@ async function UserBox({ dark = false }: { dark?: boolean }) {
       <div className={`min-w-0 ${dark ? "" : "hidden sm:block"}`}>
         <p className="truncate text-sm font-semibold">{admin.fullName}</p>
         <p className={`truncate text-xs ${dark ? "text-white/60" : "text-muted"}`}>
-          {admin.role === "owner" ? "Dueño" : "Personal"}
+          {admin.role === "owner" ? "Dueño" : "Personal"} ·{" "}
+          <Link href="/admin/cambiar-clave" className="underline hover:no-underline">Cambiar contraseña</Link>
         </p>
       </div>
       <form action={signOut} className="ml-auto">
