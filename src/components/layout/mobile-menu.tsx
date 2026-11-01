@@ -8,7 +8,6 @@ import { IconClose, IconMenu } from "@/components/ui/icons";
 
 export function MobileMenu() {
   const [open, setOpen] = useState(false);
-  const pathname = usePathname();
 
   useEffect(() => {
     if (!open) return;
@@ -44,26 +43,34 @@ export function MobileMenu() {
                 <IconClose className="size-6" />
               </button>
             </div>
-            <ul className="space-y-1">
-              {publicNav.map((item) => {
-                const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={() => setOpen(false)}
-                      aria-current={active ? "page" : undefined}
-                      className={`block rounded-xl px-4 py-3 text-base font-medium ${active ? "bg-brand-soft text-brand" : "hover:bg-surface"}`}
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+            <MenuLinks onNavigate={() => setOpen(false)} />
           </nav>
         </div>
       )}
     </div>
+  );
+}
+
+/** Solo se monta con el menú abierto, así la ruta no se lee al prerenderizar. */
+function MenuLinks({ onNavigate }: { onNavigate: () => void }) {
+  const pathname = usePathname();
+  return (
+    <ul className="space-y-1">
+      {publicNav.map((item) => {
+        const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        return (
+          <li key={item.href}>
+            <Link
+              href={item.href}
+              onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
+              className={`block rounded-xl px-4 py-3 text-base font-medium ${active ? "bg-brand-soft text-brand" : "hover:bg-surface"}`}
+            >
+              {item.label}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

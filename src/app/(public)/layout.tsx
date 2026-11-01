@@ -1,4 +1,5 @@
-import { BottomNav } from "@/components/layout/bottom-nav";
+import { Suspense } from "react";
+import { BottomNav, BottomNavView } from "@/components/layout/bottom-nav";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 
@@ -11,7 +12,9 @@ export default function PublicLayout({ children }: LayoutProps<"/">) {
       <SiteHeader />
       <main id="contenido" className="flex-1">{children}</main>
       <SiteFooter />
-      <BottomNav />
+      <Suspense fallback={<BottomNavView pathname={null} />}>
+        <BottomNav />
+      </Suspense>
     </>
   );
 }

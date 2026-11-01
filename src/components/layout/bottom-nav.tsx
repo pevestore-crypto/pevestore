@@ -13,13 +13,12 @@ const items = [
 ];
 
 /** Barra inferior en teléfonos: la navegación queda al alcance del pulgar. */
-export function BottomNav() {
-  const pathname = usePathname();
+export function BottomNavView({ pathname }: { pathname: string | null }) {
   return (
     <nav aria-label="Accesos rápidos" className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
       <ul className="grid grid-cols-5">
         {items.map(({ href, label, Icon }) => {
-          const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+          const active = pathname !== null && (href === "/" ? pathname === "/" : pathname.startsWith(href));
           return (
             <li key={href}>
               <Link
@@ -36,4 +35,9 @@ export function BottomNav() {
       </ul>
     </nav>
   );
+}
+
+/** Lee la ruta actual para resaltar la sección; va dentro de <Suspense>. */
+export function BottomNav() {
+  return <BottomNavView pathname={usePathname()} />;
 }

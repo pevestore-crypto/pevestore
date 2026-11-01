@@ -1,4 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
+import { ProductGrid } from "@/components/catalog/product-card";
+import { getCategories, getProducts, publicImageUrl } from "@/lib/catalog/public";
 import { IconArrowRight, IconBank, IconChat, IconHeadset, IconPackage, IconShield, IconTruck, IconUpload } from "@/components/ui/icons";
 
 const benefits = [
@@ -56,7 +59,7 @@ export default function HomePage() {
       </section>
 
       <Section title="Categorías" href="/productos" linkLabel="Ver todas">
-        <EmptyState text="Las categorías aparecerán aquí cuando se carguen desde el panel." />
+        <Categories />
       </Section>
 
       <Section title="Ofertas especiales" href="/ofertas" linkLabel="Ver ofertas">
@@ -64,7 +67,7 @@ export default function HomePage() {
       </Section>
 
       <Section title="Productos populares" href="/productos" linkLabel="Ver catálogo">
-        <EmptyState text="Los productos destacados aparecerán aquí." />
+        <Featured />
       </Section>
 
       <Section title="Servicios por cotización" href="/servicios" linkLabel="Ver servicios">
@@ -106,6 +109,39 @@ function Section({ title, href, linkLabel, children }: { title: string; href: st
       {children}
     </section>
   );
+}
+
+async function Categories() {
+  const [categories, products] = await Promise.all([getCategories(), getProducts()]);
+  const withProducts = categories.filter((c) => products.some((p) => p.categorySlug === c.slug));
+  if (withProducts.length === 0) return <EmptyState text="Estamos preparando el catálogo." />;
+  return (
+    <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0 lg:grid-cols-5">
+      {withProducts.map((c) => {
+        const cover = products.find((p) => p.categorySlug === c.slug && p.imagePath);
+        return (
+          <li key={c.id} className="w-36 shrink-0 snap-start sm:w-auto">
+            <Link href={`/productos/${c.slug}`} className="group block overflow-hidden rounded-2xl border border-border bg-surface-raised">
+              <div className="relative aspect-square bg-surface">
+                {cover?.imagePath && (
+                  <Image src={publicImageUrl(cover.imagePath)} alt="" fill sizes="(min-width: 1024px) 200px, 144px" className="object-cover transition-transform duration-300 group-hover:scale-[1.04]" />
+                )}
+              </div>
+              <p className="px-3 py-2.5 text-center text-sm font-semibold">{c.name}</p>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+async function Featured() {
+  const products = await getProducts();
+  const featured = products.filter((p) => p.isFeatured);
+  const list = (featured.length ? featured : products).slice(0, 8);
+  if (list.length === 0) return <EmptyState text="Los productos aparecerán aquí muy pronto." />;
+  return <ProductGrid products={list} />;
 }
 
 function EmptyState({ text }: { text: string }) {
