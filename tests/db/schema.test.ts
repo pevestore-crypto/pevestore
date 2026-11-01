@@ -20,6 +20,8 @@ const SUPABASE_STUB = `
   create table storage.objects (id uuid primary key default gen_random_uuid(),
     bucket_id text references storage.buckets(id), name text, owner uuid);
   alter table storage.objects enable row level security;
+  create role anon;
+  create role authenticated;
 `;
 
 const migrationsDir = join(__dirname, "..", "..", "supabase", "migrations");
