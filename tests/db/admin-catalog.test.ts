@@ -17,6 +17,7 @@ const STUB = `
   alter table storage.objects enable row level security;
   create role anon;
   create role authenticated;
+  create role service_role;
 `;
 
 const ADMIN = "11111111-1111-1111-1111-111111111111";

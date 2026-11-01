@@ -22,6 +22,7 @@ const SUPABASE_STUB = `
   alter table storage.objects enable row level security;
   create role anon;
   create role authenticated;
+  create role service_role;
 `;
 
 const migrationsDir = join(__dirname, "..", "..", "supabase", "migrations");

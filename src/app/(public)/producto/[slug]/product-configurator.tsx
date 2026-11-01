@@ -1,7 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { IconWhatsApp } from "@/components/ui/icons";
+import { IconCart, IconWhatsApp } from "@/components/ui/icons";
+import { cart } from "@/lib/cart/cart";
 import type { ProductDetail } from "@/lib/catalog/public";
 import { formatDOP } from "@/lib/domain/money";
 import { type PricingPolicy, PricingError, calculatePrice } from "@/lib/domain/pricing";
@@ -32,6 +34,7 @@ export function ProductConfigurator({
   const [variantId, setVariantId] = useState(product.variants[0]?.id ?? "");
   const [qtyText, setQtyText] = useState(String(product.minQty));
   const [mode, setMode] = useState<Mode | null>(modes[0] ?? null);
+  const router = useRouter();
 
   const qty = Number(qtyText);
   const variant = product.variants.find((v) => v.id === variantId) ?? null;
@@ -143,8 +146,25 @@ export function ProductConfigurator({
         <p className="rounded-xl bg-surface px-4 py-3 text-center text-sm font-medium">Agotado por el momento</p>
       ) : (
         <div className="space-y-2">
-          <button type="button" disabled className="h-12 w-full rounded-xl bg-brand font-semibold text-brand-contrast opacity-60">
-            Pedidos en línea muy pronto
+          <button
+            type="button"
+            disabled={typeof quote === "string"}
+            onClick={() => {
+              cart.add({
+                productId: product.id,
+                slug: product.slug,
+                name: product.name,
+                imagePath: product.imagePath,
+                variantId: variant?.id ?? null,
+                variantName: variant?.name ?? null,
+                quantity: qty,
+                mode,
+              });
+              router.push("/pedido");
+            }}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand font-semibold text-brand-contrast transition-colors hover:bg-brand-hover disabled:opacity-50"
+          >
+            <IconCart className="size-5" /> Agregar al pedido
           </button>
           {whatsappNumber && waText && (
             <a

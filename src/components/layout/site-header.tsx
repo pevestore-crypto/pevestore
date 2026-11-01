@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { publicNav } from "@/lib/config/site";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { IconCart, IconSearch } from "@/components/ui/icons";
+import { IconSearch } from "@/components/ui/icons";
+import { CartButton } from "./cart-button";
 import { Logo } from "./logo";
 import { MobileMenu } from "./mobile-menu";
 
@@ -27,9 +28,7 @@ export function SiteHeader() {
         <div className="ml-auto flex items-center gap-1">
           <SearchForm className="hidden w-72 xl:flex" />
           <ThemeToggle />
-          <Link href="/pedido" aria-label="Ver mi pedido" className="grid size-10 place-items-center rounded-full text-foreground transition-colors hover:bg-surface">
-            <IconCart className="size-6" />
-          </Link>
+          <CartButton />
         </div>
       </div>
       <div className="mx-auto max-w-7xl px-4 pb-3 lg:px-6 xl:hidden">

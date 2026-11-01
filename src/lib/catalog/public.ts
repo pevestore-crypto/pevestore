@@ -119,7 +119,8 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
       `${SUMMARY_SELECT}, description, min_qty, max_qty, production_days, allows_own_design, allows_gallery, allows_idea, seo_title, seo_description,
        tiers:price_tiers(min_qty, max_qty, unit_price_cents),
        product_variants(id, name, price_delta_cents, sort_order),
-       product_surcharges(id, label, amount_cents, per, customization_mode)`,
+       product_surcharges(id, label, amount_cents, per, customization_mode),
+       design_products(design_id)`,
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -139,7 +140,8 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
     maxQty: p.max_qty,
     productionDays: p.production_days,
     allowsOwnDesign: p.allows_own_design,
-    allowsGallery: p.allows_gallery,
+    // Sin diseños en la galería la opción no tiene sentido para el cliente.
+    allowsGallery: p.allows_gallery && ((p.design_products as unknown[]) ?? []).length > 0,
     allowsIdea: p.allows_idea,
     seoTitle: p.seo_title,
     seoDescription: p.seo_description,

@@ -8,5 +8,5 @@ export const adminNav = [
   { href: "/admin/banners", label: "Banners", ready: false },
   { href: "/admin/clientes", label: "Clientes", ready: false },
   { href: "/admin/finanzas", label: "Finanzas", ready: false },
-  { href: "/admin/configuracion", label: "Configuración", ready: false },
+  { href: "/admin/configuracion", label: "Configuración", ready: true },
 ] as const;
