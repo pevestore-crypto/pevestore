@@ -17,7 +17,7 @@ export function ProductGallery({ images, name }: { images: { url: string; alt: s
         <Image src={current.url} alt={current.alt || name} fill priority sizes="(min-width: 1024px) 560px, 100vw" className="object-cover" />
       </div>
       {images.length > 1 && (
-        <ul className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Fotos del producto">
+        <ul className="mt-3 flex gap-2 no-scrollbar overflow-x-auto pb-1" aria-label="Fotos del producto">
           {images.map((img, i) => (
             <li key={img.url}>
               <button

@@ -33,11 +33,11 @@ async function Report({ searchParams }: { searchParams: Promise<Record<string, s
   const f = await getFinance(period);
   const lastDay = addDays(period.toDate, -1);
   const exportHref = `/admin/finanzas/exportar?desde=${period.fromDate}&hasta=${lastDay}`;
-  const chip = (active: boolean) => `shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ${active ? "bg-brand text-brand-contrast" : "bg-background hover:bg-border"}`;
+  const chip = (active: boolean) => `inline-block shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium ${active ? "bg-brand text-brand-contrast" : "bg-background hover:bg-border"}`;
 
   return (
     <div className="mt-4 space-y-4">
-      <nav aria-label="Período" className="-mx-4 overflow-x-auto px-4 lg:mx-0 lg:px-0">
+      <nav aria-label="Período" className="-mx-4 no-scrollbar overflow-x-auto px-4 lg:mx-0 lg:px-0">
         <ul className="flex gap-2 pb-1">
           {(Object.keys(PERIOD_LABEL) as PeriodPreset[]).map((p) => (
             <li key={p}><Link href={`/admin/finanzas?periodo=${p}`} className={chip(!custom && preset === p)}>{PERIOD_LABEL[p]}</Link></li>

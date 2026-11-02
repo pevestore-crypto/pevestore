@@ -22,10 +22,10 @@ async function List({ searchParams }: { searchParams: Promise<Record<string, str
   const sp = await searchParams;
   const status = typeof sp.estado === "string" ? sp.estado : "";
   const rows = await listQuotes(status);
-  const tab = (active: boolean) => `shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ${active ? "bg-brand text-brand-contrast" : "bg-background hover:bg-border"}`;
+  const tab = (active: boolean) => `inline-block shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium ${active ? "bg-brand text-brand-contrast" : "bg-background hover:bg-border"}`;
   return (
     <>
-      <nav aria-label="Filtrar" className="-mx-4 mt-4 overflow-x-auto px-4 lg:mx-0 lg:px-0">
+      <nav aria-label="Filtrar" className="-mx-4 mt-4 no-scrollbar overflow-x-auto px-4 lg:mx-0 lg:px-0">
         <ul className="flex gap-2 pb-1">
           <li><Link href="/admin/cotizaciones" className={tab(!status)}>Todas</Link></li>
           {Object.entries(QUOTE_STATUS).map(([k, v]) => (

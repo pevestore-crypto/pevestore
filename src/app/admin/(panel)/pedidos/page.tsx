@@ -27,7 +27,7 @@ async function Orders({ searchParams }: { searchParams: Promise<Record<string, s
   const q = typeof sp.q === "string" ? sp.q.slice(0, 60) : "";
   const { rows, counts } = await listOrders({ status, q });
   const href = (s: string) => `/admin/pedidos?${new URLSearchParams({ ...(s ? { estado: s } : {}), ...(q ? { q } : {}) })}`;
-  const tab = (active: boolean) => `shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ${active ? "bg-brand text-brand-contrast" : "bg-background hover:bg-border"}`;
+  const tab = (active: boolean) => `inline-block shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium ${active ? "bg-brand text-brand-contrast" : "bg-background hover:bg-border"}`;
 
   return (
     <>
@@ -38,7 +38,7 @@ async function Orders({ searchParams }: { searchParams: Promise<Record<string, s
         <button type="submit" className="h-11 rounded-xl bg-foreground px-4 font-semibold text-background">Buscar</button>
       </form>
 
-      <nav aria-label="Filtrar por estado" className="-mx-4 mt-3 overflow-x-auto px-4 lg:mx-0 lg:px-0">
+      <nav aria-label="Filtrar por estado" className="-mx-4 mt-3 no-scrollbar overflow-x-auto px-4 lg:mx-0 lg:px-0">
         <ul className="flex gap-2 pb-1">
           <li><Link href={href("")} className={tab(!status)}>Todos</Link></li>
           {ORDER_STATUSES.map((s) => (

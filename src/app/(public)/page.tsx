@@ -147,7 +147,7 @@ async function Categories() {
   const withProducts = categories.filter((c) => products.some((p) => p.categorySlug === c.slug));
   if (withProducts.length === 0) return <EmptyState text="Estamos preparando el catálogo." />;
   return (
-    <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0 lg:grid-cols-5">
+    <ul className="-mx-4 flex snap-x gap-3 no-scrollbar overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0 lg:grid-cols-5">
       {withProducts.map((c) => {
         const cover = products.find((p) => p.categorySlug === c.slug && p.imagePath);
         return (

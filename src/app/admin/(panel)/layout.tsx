@@ -57,16 +57,16 @@ export default function AdminPanelLayout({ children }: LayoutProps<"/admin">) {
             </Suspense>
           </div>
         </header>
-        <nav aria-label="Panel" className="overflow-x-auto border-b border-border bg-background lg:hidden">
+        <nav aria-label="Panel" className="no-scrollbar overflow-x-auto border-b border-border bg-background lg:hidden">
           <ul className="flex gap-1 px-3 py-2">
             {adminNav.map((item) => (
               <li key={item.href} className="shrink-0">
                 {item.ready ? (
-                  <Link href={item.href} className="block rounded-full bg-brand-soft px-3 py-1.5 text-sm font-medium text-brand">
+                  <Link href={item.href} className="block whitespace-nowrap rounded-full bg-brand-soft px-3 py-1.5 text-sm font-medium text-brand">
                     {item.label}
                   </Link>
                 ) : (
-                  <span className="block rounded-full px-3 py-1.5 text-sm text-muted">{item.label}</span>
+                  <span className="block whitespace-nowrap rounded-full px-3 py-1.5 text-sm text-muted">{item.label}</span>
                 )}
               </li>
             ))}
