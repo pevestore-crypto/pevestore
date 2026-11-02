@@ -1,14 +1,22 @@
 import "server-only";
 
 /**
- * Verificación anti-bots de Cloudflare Turnstile en el servidor.
- * Sin TURNSTILE_SECRET_KEY configurada se omite (desarrollo); en producción
- * debe configurarse siempre.
+ * Verificación anti-bots de Cloudflare Turnstile en el servidor (siteverify).
+ *
+ * - Sin ninguna clave configurada (desarrollo): se omite.
+ * - Con clave pública pero sin la secreta: se RECHAZA (falla cerrado), para
+ *   que un error de configuración nunca deje los formularios abiertos.
+ * - Si Cloudflare no responde: se permite; el límite por IP sigue activo.
  */
 export async function verifyTurnstile(token: string | null | undefined, ip: string): Promise<boolean> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   if (!secret) {
-    if (process.env.NODE_ENV === "production") console.warn("[turnstile] TURNSTILE_SECRET_KEY no configurada: formularios sin protección anti-bots.");
+    if (siteKey) {
+      console.error("[turnstile] Falta TURNSTILE_SECRET_KEY: se rechazan los envíos hasta configurarla.");
+      return false;
+    }
+    if (process.env.NODE_ENV === "production") console.warn("[turnstile] Sin claves configuradas: formularios sin protección anti-bots.");
     return true;
   }
   if (!token || token.length > 2048) return false;
@@ -16,10 +24,10 @@ export async function verifyTurnstile(token: string | null | undefined, ip: stri
     const body = new URLSearchParams({ secret, response: token });
     if (ip && ip !== "local") body.set("remoteip", ip);
     const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body, cache: "no-store" });
-    const data = (await res.json()) as { success?: boolean };
+    const data = (await res.json()) as { success?: boolean; "error-codes"?: string[] };
+    if (!data.success) console.warn("[turnstile] verificación rechazada:", data["error-codes"]?.join(",") ?? "sin código");
     return data.success === true;
   } catch {
-    // Si Cloudflare no responde no se bloquean ventas; el límite por IP sigue activo.
     return true;
   }
 }
