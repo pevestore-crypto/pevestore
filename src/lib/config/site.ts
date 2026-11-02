@@ -13,8 +13,21 @@ export const site = {
   currency: "DOP",
   timeZone: "America/Santo_Domingo",
   orderPrefix: "PEV",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  url: siteUrl(),
 } as const;
+
+/**
+ * Dirección pública del sitio. Prioridad: NEXT_PUBLIC_SITE_URL; si no está,
+ * el dominio de producción que informa Vercel (cambia solo al conectar un
+ * dominio propio); en local, localhost.
+ */
+function siteUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "");
+  if (explicit) return explicit;
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (vercel) return `https://${vercel}`;
+  return "http://localhost:3000";
+}
 
 /** Firma del desarrollador (pie de página y metadatos). */
 export const developer = {
