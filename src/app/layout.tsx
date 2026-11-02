@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeScript } from "@/components/theme/theme-script";
-import { site } from "@/lib/config/site";
+import { developer, site } from "@/lib/config/site";
 import "./globals.css";
 
 const sans = Plus_Jakarta_Sans({
@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   title: { default: `${site.name} — ${site.tagline}`, template: `%s | ${site.name}` },
   description: site.description,
   applicationName: site.name,
+  authors: [{ name: developer.name, url: developer.url }],
+  creator: developer.name,
   openGraph: { type: "website", locale: "es_DO", siteName: site.name },
 };
 

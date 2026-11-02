@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { publicNav, site } from "@/lib/config/site";
+import { developer, publicNav, site } from "@/lib/config/site";
 import { Logo } from "./logo";
 
 /** Los datos de contacto (dirección, horario, teléfono) vienen de `settings`. */
@@ -47,9 +47,15 @@ export function SiteFooter({ contact }: { contact?: FooterContact }) {
         )}
       </div>
       <div className="border-t border-border">
-        <p className="mx-auto max-w-7xl px-4 py-5 text-xs text-muted lg:px-6">
-          © {site.name}. República Dominicana.
-        </p>
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-5 text-xs text-muted lg:px-6">
+          <p>© {site.name}. República Dominicana.</p>
+          <p>
+            Desarrollado por{" "}
+            <a href={developer.url} target="_blank" rel="noopener" className="font-medium text-foreground hover:text-brand hover:underline">
+              {developer.name}
+            </a>
+          </p>
+        </div>
       </div>
     </footer>
   );

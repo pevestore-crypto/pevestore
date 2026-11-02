@@ -16,6 +16,12 @@ export const site = {
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
 } as const;
 
+/** Firma del desarrollador (pie de página y metadatos). */
+export const developer = {
+  name: "Sebastián González Rodríguez",
+  url: "https://portafoliosgr.com",
+} as const;
+
 export const publicNav = [
   { href: "/", label: "Inicio" },
   { href: "/productos", label: "Productos" },
