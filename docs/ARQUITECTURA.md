@@ -63,6 +63,16 @@ El número de pedido **no** basta para consultar. Al finalizar, el cliente recib
 
 Logotipo oficial (SVG), fotos de productos, precios y rangos reales, número de WhatsApp empresarial, cuentas bancarias (las carga el administrador), condiciones comerciales, dirección/horario y política de privacidad (Ley 172-13).
 
+## Aplicar cambios a la base de datos
+
+Las migraciones están en `supabase/migrations/`. Se aplican al proyecto de Supabase con la cadena de conexión (Session pooler) de `.env.local`:
+
+```bash
+npx supabase db push --db-url "<SUPABASE_DB_URL>"
+```
+
+Primero con `--dry-run` para ver qué se aplicará. `npx supabase db advisors --db-url "<…>"` revisa seguridad y rendimiento.
+
 ## Comandos
 
 ```bash
