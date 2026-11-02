@@ -83,8 +83,8 @@ function Drawer({ onClose, closeRef }: { onClose: () => void; closeRef: React.Re
         className="absolute inset-y-0 left-0 flex w-[86%] max-w-sm animate-[slide-in_240ms_cubic-bezier(0.2,0.8,0.2,1)] flex-col overflow-y-auto bg-background shadow-2xl"
         style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="flex h-16 items-center justify-between border-b border-border px-4">
-          <span onClick={onClose}><Logo className="text-2xl" /></span>
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-border px-4">
+          <span onClick={onClose}><Logo className="h-10" /></span>
           <button ref={closeRef} type="button" onClick={onClose} aria-label="Cerrar menú" className="grid size-10 place-items-center rounded-full hover:bg-surface">
             <IconClose className="size-6" />
           </button>

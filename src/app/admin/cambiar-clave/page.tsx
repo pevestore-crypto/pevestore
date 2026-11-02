@@ -11,7 +11,7 @@ export default function ChangePasswordPage() {
   return (
     <main className="grid min-h-dvh place-items-center bg-surface px-4 py-10">
       <div className="w-full max-w-sm">
-        <div className="mb-6 text-center"><Logo className="text-3xl" /></div>
+        <div className="mb-6 text-center"><Logo className="h-14" /></div>
         <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
           <Suspense fallback={<div className="h-80" aria-hidden />}>
             <Content />

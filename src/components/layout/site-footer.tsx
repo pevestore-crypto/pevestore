@@ -14,7 +14,7 @@ export function SiteFooter({ contact }: { contact?: FooterContact }) {
     <footer className="mt-16 border-t border-border bg-surface pb-24 lg:pb-0">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4 lg:px-6">
         <div className="space-y-3">
-          <Logo className="text-2xl" />
+          <Logo className="h-12" />
           <p className="max-w-xs text-sm text-muted">{site.tagline}.</p>
         </div>
         <div>

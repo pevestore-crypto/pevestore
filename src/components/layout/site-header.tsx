@@ -11,7 +11,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/75">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 lg:gap-6 lg:px-6">
         <MobileMenu />
-        <Logo className="text-2xl lg:text-[1.7rem]" />
+        <Logo className="h-10 lg:h-12" />
 
         <nav aria-label="Principal" className="ml-4 hidden lg:block">
           <ul className="flex items-center gap-1">

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { adminNav } from "@/components/admin/admin-nav";
@@ -15,8 +16,8 @@ export default function AdminPanelLayout({ children }: LayoutProps<"/admin">) {
     <div className="min-h-dvh bg-surface lg:grid lg:grid-cols-[15rem_1fr]">
       <aside className="hidden flex-col bg-[#111111] text-white lg:flex">
         <div className="px-5 py-6">
-          <Link href="/admin" className="text-2xl font-black italic tracking-tight">
-            <span className="text-brand">PEVE</span>STORE
+          <Link href="/admin" aria-label="PEVESTORE, inicio del panel" className="inline-flex">
+            <Image src="/brand/pevestore-wordmark.svg" alt="PEVESTORE" width={328} height={100} unoptimized className="h-11 w-auto" />
           </Link>
           <p className="mt-1 text-xs text-white/60">Panel administrativo</p>
         </div>
@@ -47,8 +48,8 @@ export default function AdminPanelLayout({ children }: LayoutProps<"/admin">) {
 
       <div className="flex min-w-0 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background px-4 lg:hidden">
-          <Link href="/admin" className="text-xl font-black italic tracking-tight">
-            <span className="text-brand">PEVE</span>STORE
+          <Link href="/admin" aria-label="PEVESTORE, inicio del panel" className="inline-flex">
+            <Image src="/brand/pevestore-wordmark.svg" alt="PEVESTORE" width={328} height={100} unoptimized className="h-9 w-auto" />
           </Link>
           <div className="ml-auto flex items-center gap-1">
             <ThemeToggle />
