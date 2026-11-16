@@ -5,7 +5,11 @@ import { useState, useTransition } from "react";
 import { Card, Field, FormError, Toggle, dangerButton, inputClass, primaryButton, secondaryButton, textareaClass } from "@/components/admin/form-ui";
 import type { ActionResult } from "@/lib/admin/catalog-schema";
 import { BANKS, type BankAccountInput, type BusinessInput, type OrderRulesInput, WEEKDAYS } from "@/lib/admin/settings-schema";
-import { addBlockedDate, deleteBankAccount, publishPrivacy, publishTerms, removeBlockedDate, saveBankAccount, saveBusiness, saveOrderRules } from "./actions";
+import { BankBadge } from "@/components/catalog/bank-badge";
+import type { BankCode, BankLogos } from "@/lib/domain/bank-logos";
+import { resizeToWebp } from "@/lib/images/resize";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { addBlockedDate, createBankLogoUpload, deleteBankAccount, publishPrivacy, publishTerms, removeBlockedDate, saveBankAccount, saveBankLogo, saveBusiness, saveOrderRules } from "./actions";
 
 /** Estado común: guardar con una acción del servidor y mostrar errores o "Guardado". */
 function useSave() {
@@ -158,7 +162,7 @@ export function BlockedDates({ initial }: { initial: { date: string; reason: str
 
 const emptyBank: BankAccountInput = { id: "", bankCode: "banreservas", accountHolder: "", accountNumber: "", accountType: "ahorros", holderIdDoc: "", isActive: true, sortOrder: 0 };
 
-export function BankAccounts({ initial, isOwner }: { initial: BankAccountInput[]; isOwner: boolean }) {
+export function BankAccounts({ initial, logos, isOwner }: { initial: BankAccountInput[]; logos: BankLogos; isOwner: boolean }) {
   const [editing, setEditing] = useState<BankAccountInput | null>(null);
   const s = useSave();
   return (
@@ -170,10 +174,9 @@ export function BankAccounts({ initial, isOwner }: { initial: BankAccountInput[]
         <ul className="divide-y divide-border rounded-xl border border-border">
           {initial.map((a) => (
             <li key={a.id} className="flex flex-wrap items-center gap-3 px-3 py-3 text-sm">
-              <span className="size-3 rounded-full" style={{ background: BANKS[a.bankCode].color }} aria-hidden />
               <span className="min-w-0 flex-1">
-                <span className="block font-medium">{BANKS[a.bankCode].name} · {a.accountType === "ahorros" ? "Ahorros" : "Corriente"}</span>
-                <span className="block text-muted">{a.accountNumber} · {a.accountHolder}</span>
+                <BankBadge code={a.bankCode} logoUrl={logos[a.bankCode]} size="sm" />
+                <span className="mt-1 block text-muted">{a.accountType === "ahorros" ? "Ahorros" : "Corriente"} · {a.accountNumber} · {a.accountHolder}</span>
               </span>
               {!a.isActive && <span className="rounded-full bg-surface px-2 py-0.5 text-xs text-muted">Oculta</span>}
               {isOwner && <button type="button" className="rounded-lg px-3 py-1.5 hover:bg-surface" onClick={() => setEditing(a)}>Editar</button>}
@@ -232,6 +235,61 @@ export function BankAccounts({ initial, isOwner }: { initial: BankAccountInput[]
       ) : (
         isOwner && <button type="button" className={secondaryButton} onClick={() => setEditing(emptyBank)}>+ Agregar cuenta</button>
       )}
+    </Card>
+  );
+}
+
+export function BankLogosForm({ initial, isOwner }: { initial: BankLogos; isOwner: boolean }) {
+  const s = useSave();
+  const [busy, setBusy] = useState<BankCode | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  async function upload(code: BankCode, file: File | undefined) {
+    if (!file) return;
+    setUploadError(null);
+    setBusy(code);
+    try {
+      // Pequeño y en WebP: conserva la transparencia de un PNG.
+      const blob = await resizeToWebp(file, 400, 0.9);
+      const ticket = await createBankLogoUpload(code);
+      if (!ticket.ok) throw new Error(ticket.error);
+      const { error } = await createSupabaseBrowserClient().storage.from("catalog").uploadToSignedUrl(ticket.path, ticket.token, blob, { contentType: "image/webp" });
+      if (error) throw new Error("No se pudo subir la imagen.");
+      s.run(() => saveBankLogo(code, ticket.path));
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Error inesperado.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <Card title="Logos de los bancos" description={isOwner ? "Se muestran al cliente al elegir el banco y en su pedido. Usa PNG con fondo transparente o blanco." : "Solo el dueño puede cambiar los logos."}>
+      <FormError message={uploadError ?? s.errors._} />
+      <ul className="divide-y divide-border rounded-xl border border-border">
+        {(Object.keys(BANKS) as BankCode[]).map((code) => {
+          const logo = initial[code];
+          return (
+            <li key={code} className="flex flex-wrap items-center gap-3 px-3 py-3 text-sm">
+              <span className="min-w-0 flex-1"><BankBadge code={code} logoUrl={logo} /></span>
+              {isOwner && (
+                <>
+                  <input id={`logo-${code}`} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => { upload(code, e.target.files?.[0]); e.target.value = ""; }} />
+                  <label htmlFor={`logo-${code}`} className={`${secondaryButton} h-9 cursor-pointer px-3 text-sm ${busy || s.pending ? "pointer-events-none opacity-60" : ""}`}>
+                    {busy === code ? "Subiendo…" : logo ? "Cambiar logo" : "Subir logo"}
+                  </label>
+                  {logo && (
+                    <button type="button" disabled={!!busy || s.pending} className="rounded-lg px-3 py-1.5 text-danger hover:bg-brand-soft" onClick={() => window.confirm(`¿Quitar el logo de ${BANKS[code].name}?`) && s.run(() => saveBankLogo(code, null))}>
+                      Quitar
+                    </button>
+                  )}
+                </>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="text-xs text-muted">Usa solo logos oficiales que tengas permiso de usar. Sin logo, se muestra la inicial con el color del banco.</p>
     </Card>
   );
 }

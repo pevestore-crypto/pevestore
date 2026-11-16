@@ -138,6 +138,14 @@ describe("catálogo y campañas", () => {
     await expect(insert("//anunciante.com")).rejects.toThrow();
   });
 
+  it("los logos de bancos solo aceptan los bancos conocidos", async () => {
+    const set = (logos: unknown) => db.query("update settings set bank_logos = $1::jsonb", [JSON.stringify(logos)]);
+    await expect(set({ popular: "banks/popular-x.webp" })).resolves.toBeDefined();
+    await expect(set({ otrobanco: "banks/x.webp" })).rejects.toThrow();
+    await expect(set(["banks/x.webp"])).rejects.toThrow();
+    await set({});
+  });
+
   it("una promoción necesita fechas coherentes y un único objetivo", async () => {
     const cat = await db.query<{ id: string }>("insert into categories (slug, name) values ('tazas', 'Tazas personalizadas') returning id");
     const promo = (start: string, end: string) =>

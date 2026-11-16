@@ -217,7 +217,7 @@ export function Checkout() {
                   {quote?.banks.map((b) => (
                     <label key={b.id} className={`flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-sm ${form.bankAccountId === b.id ? "border-brand bg-brand-soft" : "border-border"}`}>
                       <input type="radio" name="bank" className="sr-only" checked={form.bankAccountId === b.id} onChange={() => set("bankAccountId", b.id)} />
-                      <BankBadge code={b.bankCode} size="sm" />
+                      <BankBadge code={b.bankCode} logoUrl={quote.bankLogos[b.bankCode]} size="sm" />
                     </label>
                   ))}
                 </div>

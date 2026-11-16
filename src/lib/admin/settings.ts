@@ -1,5 +1,6 @@
 import "server-only";
 import { requireAdmin } from "@/lib/auth/dal";
+import { type BankLogos, bankLogoUrls } from "@/lib/domain/bank-logos";
 import { privacyDraft } from "@/lib/legal/privacy-draft";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { BankAccountInput, BusinessInput, OrderRulesInput } from "./settings-schema";
@@ -8,6 +9,7 @@ export interface AdminSettings {
   business: BusinessInput;
   rules: OrderRulesInput;
   banks: BankAccountInput[];
+  bankLogos: BankLogos;
   blockedDates: { date: string; reason: string }[];
   terms: { version: number; body: string } | null;
   privacy: { body: string; updatedAt: string | null; draft: string };
@@ -49,6 +51,7 @@ export async function getAdminSettings(): Promise<AdminSettings> {
       isActive: b.is_active,
       sortOrder: b.sort_order,
     })),
+    bankLogos: bankLogoUrls(st.bank_logos),
     blockedDates: (dates.data ?? []).map((d) => ({ date: d.date, reason: d.reason ?? "" })),
     terms: terms.data ?? null,
     privacy: {

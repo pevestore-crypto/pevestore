@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
+import { type BankLogos, bankLogoUrls } from "@/lib/domain/bank-logos";
 import { type PriceQuote, PricingError, type PricingPolicy, type PricingPromotion, bestQuote, splitPayment } from "@/lib/domain/pricing";
 import { type IsoDate, type WorkCalendar, earliestDeliveryDate } from "@/lib/domain/schedule";
 import { UPLOAD_LIMITS } from "@/lib/domain/uploads";
@@ -54,6 +55,7 @@ export interface CheckoutContext {
   defaultProductionDays: number;
   whatsappNumber: string | null;
   banks: PublicBank[];
+  bankLogos: BankLogos;
   terms: { version: number; body: string } | null;
 }
 
@@ -84,6 +86,7 @@ export async function loadCheckoutContext(): Promise<CheckoutContext> {
       accountType: b.account_type,
       holderIdDoc: b.holder_id_doc,
     })),
+    bankLogos: bankLogoUrls(s.data.bank_logos),
     terms: terms.data ?? null,
   };
 }

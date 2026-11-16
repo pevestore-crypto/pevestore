@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { BankBadge } from "@/components/catalog/bank-badge";
 import { IconWhatsApp } from "@/components/ui/icons";
+import { bankLogoUrls } from "@/lib/domain/bank-logos";
 import { formatDOP } from "@/lib/domain/money";
 import { ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/domain/order-status";
 import { formatIsoDateLong } from "@/lib/domain/schedule";
@@ -47,7 +48,7 @@ async function Content({ params, searchParams }: { params: Promise<{ code: strin
     db.from("order_items").select("id, product_name, variant_name, quantity, unit_cents, total_cents, customization_mode, pricing_snapshot").eq("order_id", order.id),
     db.from("order_files").select("purpose").eq("order_id", order.id),
     db.from("payments").select("status").eq("order_id", order.id),
-    db.from("settings").select("whatsapp_number").single(),
+    db.from("settings").select("whatsapp_number, bank_logos").single(),
   ]);
   const lines = (items.data ?? []).sort((a, b) => Number(a.pricing_snapshot?.lineIndex ?? 0) - Number(b.pricing_snapshot?.lineIndex ?? 0));
   const status = order.status as OrderStatus;
@@ -113,7 +114,7 @@ async function Content({ params, searchParams }: { params: Promise<{ code: strin
           </dl>
 
           <div className="rounded-xl border border-border p-4">
-            <BankBadge code={bank.bankCode} />
+            <BankBadge code={bank.bankCode} logoUrl={bankLogoUrls(settings.data?.bank_logos)[bank.bankCode]} />
             <dl className="mt-3 space-y-1.5 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <dt className="text-muted">Cuenta {bank.accountType === "ahorros" ? "de ahorros" : "corriente"}</dt>

@@ -2,6 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { fieldErrors } from "@/lib/admin/catalog-schema";
+import type { BankLogos } from "@/lib/domain/bank-logos";
 import { checkRequestedDate, formatIsoDateLong, isIsoDate } from "@/lib/domain/schedule";
 import { allowRequest, clientIp, findOrderByToken, verifyStoredFile } from "@/lib/orders/access";
 import { TURNSTILE_ERROR, verifyTurnstile } from "@/lib/security/turnstile";
@@ -30,6 +31,7 @@ export interface CartQuote {
   ok: boolean;
   earliestDate: string;
   banks: PublicBank[];
+  bankLogos: BankLogos;
   terms: { version: number; body: string } | null;
   ready: boolean;
   rounding: 1 | 100;
@@ -51,6 +53,7 @@ export async function quoteCart(items: CartItemInput[]): Promise<CartQuote | { e
     ok,
     earliestDate: earliestDateFor(lines, ctx, now),
     banks: ctx.banks,
+    bankLogos: ctx.bankLogos,
     terms: ctx.terms,
     ready: ctx.banks.length > 0 && ctx.terms !== null,
     rounding: ctx.policy.rounding,

@@ -1,9 +1,12 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { updateTag } from "next/cache";
+import { z } from "zod";
 import { type ActionResult, dbErrorMessage, fieldErrors } from "@/lib/admin/catalog-schema";
-import { bankAccountSchema, blockedDateSchema, businessSchema, orderRulesSchema, termsSchema } from "@/lib/admin/settings-schema";
+import { BANKS, bankAccountSchema, blockedDateSchema, businessSchema, orderRulesSchema, termsSchema } from "@/lib/admin/settings-schema";
 import { requireAdmin, requireOwner } from "@/lib/auth/dal";
+import { type BankCode, parseBankLogoPaths } from "@/lib/domain/bank-logos";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const ok = (id = "settings"): ActionResult => ({ ok: true, id });
@@ -81,6 +84,43 @@ export async function deleteBankAccount(id: string): Promise<ActionResult> {
   if (error) return { ok: false, errors: dbErrorMessage(error) };
   updateTag("settings");
   return ok(id);
+}
+
+const bankCodeSchema = z.enum(Object.keys(BANKS) as [BankCode, ...BankCode[]]);
+
+export async function createBankLogoUpload(code: string): Promise<{ ok: true; path: string; token: string } | { ok: false; error: string }> {
+  await requireOwner();
+  const parsed = bankCodeSchema.safeParse(code);
+  if (!parsed.success) return { ok: false, error: "Banco inválido." };
+  const path = `banks/${parsed.data}-${randomUUID()}.webp`;
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.storage.from("catalog").createSignedUploadUrl(path);
+  if (error || !data) return { ok: false, error: "No se pudo preparar la subida." };
+  return { ok: true, path, token: data.token };
+}
+
+/** Guarda (o quita, con path null) el logo de un banco y borra el archivo anterior. */
+export async function saveBankLogo(code: string, path: string | null): Promise<ActionResult> {
+  await requireOwner();
+  const parsed = bankCodeSchema.safeParse(code);
+  if (!parsed.success) return { ok: false, errors: { _: "Banco inválido." } };
+  const bank = parsed.data;
+  // Solo rutas creadas por createBankLogoUpload para ese banco.
+  if (path !== null && !new RegExp(`^banks/${bank}-[0-9a-f-]{36}\\.webp$`).test(path)) return { ok: false, errors: { _: "Archivo inválido." } };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: s, error: readErr } = await supabase.from("settings").select("bank_logos").single();
+  if (readErr) return { ok: false, errors: dbErrorMessage(readErr) };
+  const logos = parseBankLogoPaths(s.bank_logos);
+  const previous = logos[bank];
+  if (path) logos[bank] = path;
+  else delete logos[bank];
+
+  const { error } = await supabase.from("settings").update({ bank_logos: logos }).eq("id", true);
+  if (error) return { ok: false, errors: dbErrorMessage(error) };
+  if (previous && previous !== path) await supabase.storage.from("catalog").remove([previous]);
+  updateTag("settings");
+  return ok(bank);
 }
 
 export async function publishTerms(input: unknown): Promise<ActionResult> {
